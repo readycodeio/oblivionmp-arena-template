@@ -1,0 +1,14 @@
+{
+  "uniqueId": "ArenaMod",
+  "version": "0.2.0",
+  "name": "OblivionMP Arena",
+  "author": "ReadyM Team",
+  "description": "Free-for-all arena game mode. Walk onto the arena floor to register, step into the inner ring to ready up, last one standing wins.",
+  "link": "https://docs.ready.mp",
+  "dependencies": [
+    {
+      "uniqueId": "OblivionMP.SDK",
+      "minimumVersion": "0.2.0"
+    }
+  ]
+}

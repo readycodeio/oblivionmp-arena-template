@@ -1,20 +1,20 @@
-# OblivionMP Arena Template
+# OB:MP Arena Template
 
-A working free-for-all arena game mode for OblivionMP, the community multiplayer mod for The Elder Scrolls IV: Oblivion Remastered. It is built on the OblivionMP mod template and covers most of what a server-side game mode needs: server RPC, per-tick systems, ECS queries against player state, area events, HUD messages and key bindings on the client.
+A working free-for-all arena game mode for [OB:MP](https://obmp.readym.io/), the community multiplayer mod for The Elder Scrolls IV: Oblivion Remastered. It is built on the OblivionMP mod template and covers most of what a server-side game mode needs: server RPC, per-tick systems, ECS queries against player state, area events, HUD messages and key bindings on the client.
 
 Use it as a starting point for your own mode. The Known Limitations section at the bottom says what does not work yet.
 
-Refer to the [OblivionMP SDK documentation](https://docs.ready.mp) for the SDK itself.
+Refer to the [OblivionMP SDK documentation](https://docs.ready.mp/oblivion-mp/docs/what-is-oblivion-mp) for the SDK itself.
 
 ## Requirements
 
 * [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) or later
 * If you are using Visual Studio, you need version 2026 or later
-* To test it, an OblivionMP server you can drop mods into and at least two clients
+* To test it, an OB:MP server you can drop mods into and at least two clients
 
 ## Repository structure
 
-An OblivionMP mod is two halves that share a common core. Client mods are handed to players by the server when they join. Server mods run on the relay and never leave it.
+An OB:MP mod is two halves that share a common core. Client mods are handed to players by the server when they join. Server mods run on the relay and never leave it.
 
 - `ArenaMod.Common/`: shared by both halves. `RpcContracts.cs` declares every message the arena sends, `RArenaCommon.cs` holds the arena cell id, center, radii and timers.
 - `ArenaMod.Client/`: loaded by the game. `Mod.cs` is the entry point and binds keys, `ExampleServerRpc.cs` receives server messages and drives the HUD, `DetectDeadPlayerSystem.cs` prints the rules when you die, `RArenaClient.cs` holds the HUD strings.
@@ -22,7 +22,7 @@ An OblivionMP mod is two halves that share a common core. Client mods are handed
 - `Content/manifest.json`: mod id, name, version, dependencies.
 - `Dependencies/`: the OblivionMP SDK assemblies the projects compile against. `Client/` is what the game provides, `Server/` what the relay provides. They are referenced with `Private=false` and never copied into your mod.
 
-## How the arena plays
+## How the arena sample works
 
 1. Walk onto the arena floor and you are registered as a contender. The HUD shows how many are registered and how many are ready.
 2. Step into the inner ring to ready up. Step out and you are not ready. Walk off the floor and you are removed.
@@ -76,7 +76,7 @@ Where to change what:
 
 Client systems read `tick.deltaTime`, server systems read `tick.DeltaTime`. You will hit that the first time you copy a system between halves.
 
-## Known limitations
+## Known limitations (for now!)
 
 - Only free-for-all last-one-standing works. Tournament, teams, kill count and best-of-N exist as enums and stubs.
 - Server-side teleport is unreliable. Setting a player's position from the server does not always move them, which affects the spectator stand.
@@ -86,12 +86,6 @@ Client systems read `tick.deltaTime`, server systems read `tick.DeltaTime`. You 
 
 ## Links
 
-- SDK docs: https://docs.ready.mp
+- OB:MP SDK docs: [https://docs.ready.mp](https://docs.ready.mp/oblivion-mp/docs/what-is-oblivion-mp)
 - Discord: https://discord.gg/obmp
 - Server owner early access: https://oblivionmp.firstlook.gg
-
----
-
-OblivionMP is developed by ReadyCode Limited. Backed by Sony Innovation Fund, London Venture Partners, and Lifelike Capital.
-
-Not an official product of Bethesda Softworks or Virtuos. Not affiliated with either studio. You need your own copy of The Elder Scrolls IV: Oblivion Remastered to play.

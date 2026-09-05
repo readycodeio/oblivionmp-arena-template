@@ -32,8 +32,8 @@ namespace ArenaMod.Server.RArenaPlugin
         private EArenaLossCondition _arenaHpLossCondition;
 
         public RArenaPlayerLossCondition(RArena rArena, EcsApi ecsApi, RArenaServerRpc sRpc,
-            int priority, 
-            float targetHpPercentage = 0.3f, float targetHpLimit = 1, 
+            int priority,
+            float targetHpPercentage = 0.3f, float targetHpLimit = 1,
             EArenaLossCondition arenaHpLossCondition = EArenaLossCondition.PlayerDead)
             : this(rArena, ecsApi, sRpc)
         {
@@ -70,7 +70,7 @@ namespace ArenaMod.Server.RArenaPlugin
                         rArena.Participants[main.PlayerId] = EArenaParticipantStatus.Loss;
                         foreach (var p in rArena.Participants.Keys)
                         {
-                            sRpc.SendPlayerEleminated(p, main.PlayerId);
+                            sRpc.SendPlayerEliminated(p, main.PlayerId);
                         }
                         RArenaUtils.Heal(id, ref vital);
                     }
@@ -85,7 +85,7 @@ namespace ArenaMod.Server.RArenaPlugin
 
         public override void Reset()
         {
-            
+
         }
     }
 

@@ -12,12 +12,12 @@ namespace ArenaMod.Server.RArenaPlugin
     // 1) TransformComponent.Position override not doing anything
     // 2) Rebirth merging two save files (world.sav + player_guid.sav)
     //      Results in appearance matching player.sav while attributes and inventory are that of world.sav
-    //      
+    //
     // 3) Items durability may be worn out after a match or two depending on the use
     //      This may be an issue should the person want to remain on given character
     //      Arrows and magic scrolls can be refilled using SDK.AddItemToInventory
     //      May need to force the player to reload the game, possibly having different character upon connecting
-    // 4) 
+    // 4)
 
     internal class RArenaSystem(RArena rArena, EcsApi ecsApi, RArenaServerRpc sRpc, ILogger logger) : ModSystemBase
     {
@@ -397,7 +397,7 @@ namespace ArenaMod.Server.RArenaPlugin
             rArena.Participants[playerId] = EArenaParticipantStatus.Loss;
             foreach (var p in rArena.Participants.Keys)
             {
-                sRpc.SendPlayerEleminated(p, playerId);
+                sRpc.SendPlayerEliminated(p, playerId);
             }
         }
 
@@ -407,7 +407,7 @@ namespace ArenaMod.Server.RArenaPlugin
             {
                 if (rArena.Participants.TryGetValue(player.PlayerId, out var status) && status == EArenaParticipantStatus.Fighting)
                 {
-                    if (cell.Kind == ParentCellKind.Exterior) 
+                    if (cell.Kind == ParentCellKind.Exterior)
                     {
                         MercyGiveUp(player.PlayerId);
                         return;

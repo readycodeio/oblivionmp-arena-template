@@ -76,7 +76,7 @@ public partial class RArenaServerRpc(ILogger logger) : ServerRpcClient
         SDK.GameMessage.ShowMessage("Fight started!", MessagePosition.Center, 5);
     }
 
-    partial void OnPlayerEleminated(PlayerId playerId)
+    partial void OnPlayerEliminated(PlayerId playerId)
     {
         if (playerId.Equals(SDK.Sync.LocalPlayer?.PlayerId))
         {

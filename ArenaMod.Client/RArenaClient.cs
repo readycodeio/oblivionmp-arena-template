@@ -12,7 +12,7 @@
         // {ready} to swap into 'not ready' or 'ready'
         public static readonly string ParticipantReadyString = "You have been marked as {arg} for arena match";
         public static readonly string ArenaMajorityCountdownString = "\nArena match will start in {arg}s!";
-        public static string ArenaParticipantInfoMessageString = "Waiting for all players to be ready!" +
+        public static readonly string ArenaParticipantInfoMessageString = "Waiting for all players to be ready!" +
                                         "\n{ready} / {total}" +
                                         " ({percent}%)" +
                                         "\n{status}." +

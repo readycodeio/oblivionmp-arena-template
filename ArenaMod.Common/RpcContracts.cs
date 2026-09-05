@@ -9,7 +9,7 @@ namespace ArenaMod.Common;
 public static partial class RpcContracts
 {
     [ServerToClient] public static partial void AnnounceWinner(PlayerId winner);
-    [ServerToClient] public static partial void AnnouneWinnerTeam(byte team);
+    [ServerToClient] public static partial void AnnounceWinnerTeam(byte team);
     [ServerToClient] public static partial void AnnounceFightStarted();
     [ServerToClient] public static partial void AnnounceFightEnded();
     [ServerToClient] public static partial void AreaJoined(string area);
@@ -18,10 +18,10 @@ public static partial class RpcContracts
     [ServerToClient] public static partial void ArenaParticipantReady(bool ready, int allReady);
     [ServerToClient] public static partial void UpdateParticipantRegistered(int allRegistered);
     [ServerToClient] public static partial void UpdateParticipantReady(int allReady);
-    [ServerToClient] public static partial void PlayerEleminated(PlayerId playerId);
+    [ServerToClient] public static partial void PlayerEliminated(PlayerId playerId);
     [ServerToClient] public static partial void ArenaCountdown(int timeLeft);
     [ClientToServer] public static partial void DemandHeal();
     [ClientToServer] public static partial void DemandHealAllPlayers();
     [ClientToServer] public static partial void DemandPositionChange();
-    
+
 }

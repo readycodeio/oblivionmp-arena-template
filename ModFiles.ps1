@@ -34,7 +34,7 @@ $manifestFiles = @(
 
 # Copied from "Content" into client/ and server/. Add any non-code files your mod ships.
 $clientContentFiles = @(
-    # "icon.png"
+    "rarenaplugin.esp"
 )
 
 $serverContentFiles = @(

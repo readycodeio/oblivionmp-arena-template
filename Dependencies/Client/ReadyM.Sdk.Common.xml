@@ -20,20 +20,22 @@
             Provides methods related to input, such as registering key binds.
             </summary>
         </member>
-        <member name="M:ReadyM.Sdk.Common.Api.IInputApi.RegisterKeyBind(ReadyM.Sdk.Common.Input.Key,System.Action)">
+        <member name="M:ReadyM.Sdk.Common.Api.IInputApi.RegisterKeyBind(ReadyM.Sdk.Common.Input.Key,System.Action,ReadyM.Sdk.Common.Input.KeySource)">
             <summary>
             Registers a key bind with the specified key and action.
             </summary>
             <param name="key">The key to bind.</param>
             <param name="action">The action to execute when the key is pressed.</param>
+            <param name="source">Where the press comes from. Polled unless said otherwise.</param>
         </member>
-        <member name="M:ReadyM.Sdk.Common.Api.IInputApi.RegisterKeyBind(ReadyM.Sdk.Common.Input.ModifierKeys,ReadyM.Sdk.Common.Input.Key,System.Action)">
+        <member name="M:ReadyM.Sdk.Common.Api.IInputApi.RegisterKeyBind(ReadyM.Sdk.Common.Input.ModifierKeys,ReadyM.Sdk.Common.Input.Key,System.Action,ReadyM.Sdk.Common.Input.KeySource)">
             <summary>
             Registers a key bind with the specified modifier keys, key, and action.
             </summary>
             <param name="modifiers">The modifier keys (e.g., Ctrl, Alt, Shift).</param>
             <param name="key">The key to bind.</param>
             <param name="action">The action to execute when the key combination is pressed.</param>
+            <param name="source">Where the press comes from. Polled unless said otherwise.</param>
         </member>
         <member name="M:ReadyM.Sdk.Common.Api.IInputApi.CanApplyInput">
             <summary>
@@ -68,6 +70,38 @@
             <summary>
             Represents the buttons on a gamepad controller.
             </summary>
+        </member>
+        <member name="T:ReadyM.Sdk.Common.Input.KeySource">
+            <summary>
+            Where a key bind's presses come from.
+            </summary>
+            <remarks>
+            The two are different pipelines rather than settings on one, and they answer different questions. Pick by
+            whether the bind should fire when the game's own UI is using the key.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Sdk.Common.Input.KeySource.Polled">
+            <summary>
+            The keyboard's hardware state, polled.
+            </summary>
+            <remarks>
+            Fires whenever the key is down, whatever else is happening, and cannot say it took the press. Nothing
+            downstream is told, so the press also reaches the game and anything else watching for it.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Sdk.Common.Input.KeySource.UnhandledByUi">
+            <summary>
+            The engine's key down, and only when nothing in the UI handled it.
+            </summary>
+            <remarks>
+            Fires after every widget in the focus path has declined the press, including whatever routes input to
+            the player. The press is then reported as handled, so it stops there: it does not reach the game, and
+            the character it would have produced is not typed anywhere.
+            <para>
+            This is what a bind that opens something wants. A key that opens a text field must not also be typed
+            into the field it opened, and must not fire at all while that field already has the keyboard.
+            </para>
+            </remarks>
         </member>
         <member name="T:ReadyM.Sdk.Common.Input.ModifierKeys">
             <summary>

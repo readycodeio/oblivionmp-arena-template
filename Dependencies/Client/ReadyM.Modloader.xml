@@ -4,6 +4,39 @@
         <name>ReadyM.Modloader</name>
     </assembly>
     <members>
+        <member name="T:ReadyM.Modloader.Assemblies.LoadedAssemblies">
+            <summary>
+            The already-loaded assembly a load context's unresolved reference binds to, before anything is probed on disk.
+            </summary>
+            <remarks>
+            ONLY THE CONTEXT'S OWN. A hot-reloaded client gives each generation of its mods a load context of its own and
+            never collects the earlier ones, so "loaded anywhere in the process" includes every earlier generation's copy
+            of the same assembly. Binding to one of those hands the new mods types that merely share a name with their own.
+            The default context needs no searching here: the runtime has already tried it before asking.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Modloader.ModLoader.ModLoadState.Mod">
+            Null until an ICSharpMod is found or a [ModEntry] is wrapped, and it may stay that way.
+        </member>
+        <member name="F:ReadyM.Modloader.ModLoader.ModEntryAttributeName">
+            Read off the metadata rather than the type, since this runs before the assembly is loaded.
+        </member>
+        <member name="M:ReadyM.Modloader.ModLoader.ApplyGeneratedShapes">
+            <summary>
+            Registers what every loaded assembly's shapes add to an archetype, and which component holds
+            an index, before any mod runs and can create an entity.
+            </summary>
+            <remarks>
+            Every assembly, not only the ones holding a mod class: a mod's shapes usually live in a
+            library it depends on. A netstandard2.0 assembly has no module initializer, so this is the
+            only thing that registers them there.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Modloader.ModLoader.StartModEntryPoints">
+            <summary>
+            Builds each [ModEntry] class and runs its Start, once every mod has been through Init.
+            </summary>
+        </member>
         <member name="P:ReadyM.Modloader.Mods.ICSharpMod.Name">
             <summary>
             The mod name
@@ -27,6 +60,18 @@
             <summary>
             Called after all mods have called RegisterServices.
             </summary>
+        </member>
+        <member name="T:ReadyM.Modloader.Mods.ModEntryAdapter">
+            What the loader holds for a mod entered through a [ModEntry] class rather than a base class.
+        </member>
+        <member name="M:ReadyM.Modloader.Mods.ModEntryAdapter.#ctor(System.Reflection.Assembly,System.String,Microsoft.Extensions.Logging.ILogger)">
+            What the loader holds for a mod entered through a [ModEntry] class rather than a base class.
+        </member>
+        <member name="M:ReadyM.Modloader.Mods.ModEntryAdapter.Init(ReadyM.Api.DI.IDependencyContainer)">
+            The entry point is built once every mod has registered, which is Start.
+        </member>
+        <member name="M:ReadyM.Modloader.Mods.ModEntryAdapter.Start">
+            <summary>Runs once, whichever phase asks for it first.</summary>
         </member>
         <member name="T:ReadyM.Modloader.Mods.ModSystemBase">
             Base class for plugin systems. Adds itself to the update loop on creation and removes itself on disposal.

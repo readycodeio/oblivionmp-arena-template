@@ -4,6 +4,86 @@
         <name>ReadyM.Relay.Common.Oblivion</name>
     </assembly>
     <members>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent">
+            <summary>
+            Everything needed to materialize one dynamic alchemy form (created at runtime, like a player-brewed potion type).
+            </summary>
+            <remarks>
+            An entity with this component is a form entity that identifies this form across network, so all clients and
+            the server can reference that form in network messages even though the form itself doesn't exist on server
+            and each client materializes it locally with a different dynamic formID.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.#ctor(Yooni.Native.LowLevel.AllocatorKind)">
+            <summary>
+            Everything needed to materialize one dynamic alchemy form (created at runtime, like a player-brewed potion type).
+            </summary>
+            <remarks>
+            An entity with this component is a form entity that identifies this form across network, so all clients and
+            the server can reference that form in network messages even though the form itself doesn't exist on server
+            and each client materializes it locally with a different dynamic formID.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._name">
+            <summary>The item's display name.</summary>
+        </member>
+        <member name="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._modelPath">
+            <summary>The path of the item's 3D model, used for both the inventory preview and the dropped-in-world mesh.</summary>
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ChangeComponent">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Value">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._value"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Weight">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._weight"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Flags">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._flags"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Name">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._name"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ModelPath">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent._modelPath"/>
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Effects_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.MagicEffectEntry},System.Int32)">
+            <exclude />
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.Fields">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ClearApiFlag">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ClearApiFlag(System.Int32)">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ChangedFromApi">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.MarkChangedFromApi">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.DeserializeTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.WriteDelta(LiteNetLib.Utils.NetDataWriter)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ReadDelta(LiteNetLib.Utils.NetDataReader)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ReadDeltaTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.ClearDirty">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.AlchemyFormComponent.IsDirty">
+            <exclude />
+        </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.AnimationMovementComponent">
             <summary>
             Holds the player character's movement and animation data.
@@ -438,7 +518,7 @@
         </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.BaseIdComponent">
             <summary>
-            Holds an Oblivion actor's Base ID.
+            Holds the form an Oblivion actor is spawned from, which can be a form from the game files or a dynamic one.
             </summary>
         </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.BaseIdComponent.ChangeComponent">
@@ -606,59 +686,6 @@
             <exclude />
         </member>
         <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.DifficultyComponent.IsDirty">
-            <exclude />
-        </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent">
-            <summary>
-            Holds the player's dynamic forms, including spells and alchemy effects.
-            </summary>
-        </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ChangeComponent">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.Spells_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.DynamicSpellEntry},System.Int32)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.SpellEffects_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.MagicEffectEntry},System.Int32)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.Alchemy_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.AlchemyEntry},System.Int32)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.AlchemyEffects_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.MagicEffectEntry},System.Int32)">
-            <exclude />
-        </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.Fields">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ClearApiFlag">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ClearApiFlag(System.Int32)">
-            <exclude />
-        </member>
-        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ChangedFromApi">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.MarkChangedFromApi">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.DeserializeTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.WriteDelta(LiteNetLib.Utils.NetDataWriter)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ReadDelta(LiteNetLib.Utils.NetDataReader)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ReadDeltaTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
-            <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.ClearDirty">
-            <exclude />
-        </member>
-        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.DynamicFormsComponent.IsDirty">
             <exclude />
         </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.EffectsAttributesComponent">
@@ -1154,6 +1181,74 @@
         <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SocialAttributesComponent.IsDirty">
             <exclude />
         </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent">
+            <summary>
+            Everything needed to materialize one dynamic spell form (created at runtime, like a player-crafted spell).
+            </summary>
+            <remarks>
+            An entity with this component is a form entity that identifies this form across network, so all clients and
+            the server can reference that form in network messages even though the form itself doesn't exist on server
+            and each client materializes it locally with a different dynamic formID.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.#ctor(Yooni.Native.LowLevel.AllocatorKind)">
+            <summary>
+            Everything needed to materialize one dynamic spell form (created at runtime, like a player-crafted spell).
+            </summary>
+            <remarks>
+            An entity with this component is a form entity that identifies this form across network, so all clients and
+            the server can reference that form in network messages even though the form itself doesn't exist on server
+            and each client materializes it locally with a different dynamic formID.
+            </remarks>
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ChangeComponent">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.MagickaCost">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent._magickaCost"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.SpellType">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent._spellType"/>
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.Flags">
+            <inheritdoc cref="F:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent._flags"/>
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.Effects_SetFromApi(Yooni.Native.Container.NativeList{ReadyM.Relay.Common.Oblivion.ECS.Values.MagicEffectEntry},System.Int32)">
+            <exclude />
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.Fields">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ClearApiFlag">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ClearApiFlag(System.Int32)">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ChangedFromApi">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.MarkChangedFromApi">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.DeserializeTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.WriteDelta(LiteNetLib.Utils.NetDataWriter)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ReadDelta(LiteNetLib.Utils.NetDataReader)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ReadDeltaTracking(LiteNetLib.Utils.NetDataReader,System.Int32)">
+            <exclude />
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.ClearDirty">
+            <exclude />
+        </member>
+        <member name="P:ReadyM.Relay.Common.Oblivion.ECS.Components.SpellFormComponent.IsDirty">
+            <exclude />
+        </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Components.SpokenTopicsComponent.ChangeComponent">
             <exclude />
         </member>
@@ -1510,8 +1605,34 @@
         </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Values.InventoryEntry">
             <summary>
-            Represents an entry in a player's inventory, including the item form ID, quantity, and worn status.
+            Represents an entry in a player's inventory, including the item form, quantity, and worn status.
             </summary>
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Values.MagicEffectEntry">
+            <summary>
+            One magic effect of a dynamic form.
+            A single dynamic form (like a player-brewed potion type or a player-crafted spell) can contain multiple magic effects.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Relay.Common.Oblivion.ECS.Values.NetworkFormId">
+            <summary>
+            Names a form in a way every client can resolve.
+            </summary>
+            <remarks>
+            A form that comes from the game files has the same form ID everywhere, so it travels as that ID. A dynamic
+            form is created at runtime and gets a different ID on every client, so it travels as the network ID of its
+            form entity, which each client maps back to its own form ID.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Relay.Common.Oblivion.ECS.Values.NetworkFormId.FormId">
+            <summary>The form ID of a form from the game files, or 0 for a dynamic form.</summary>
+        </member>
+        <member name="F:ReadyM.Relay.Common.Oblivion.ECS.Values.NetworkFormId.FormEntityNetId">
+            <summary>The form entity of a dynamic form, or the default for a form from the game files.</summary>
+            <remarks>Internal because <see cref="T:ReadyM.Api.Multiplayer.ECS.Values.NetworkId"/> is.</remarks>
+        </member>
+        <member name="M:ReadyM.Relay.Common.Oblivion.ECS.Values.NetworkFormId.op_Implicit(ReadyM.Relay.Common.Oblivion.FormId)~ReadyM.Relay.Common.Oblivion.ECS.Values.NetworkFormId">
+            <summary>A form from the game files is named by its form ID everywhere, so it is one of these already.</summary>
         </member>
         <member name="T:ReadyM.Relay.Common.Oblivion.FormId">
             <summary>
@@ -1519,52 +1640,35 @@
             Used for identifying various game objects, such as items, NPCs, and locations.
             </summary>
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Ammunition">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Ammunition">
             Lists all ammunition in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Armors">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Armors">
             Lists all armors in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Books">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Books">
             Lists all books in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Clothes">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Clothes">
             Lists all clothes in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Ingredients">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Ingredients">
             Lists all ingredients in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Keys">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Keys">
             Lists all keys in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Potions">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Potions">
             Lists all potions in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Scrolls">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Scrolls">
             Lists all scrolls in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.SoulGems">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.SoulGems">
             Lists all soulgems in the game.
         </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.Data.Items.Weapons">
+        <member name="T:ReadyM.Relay.Common.Oblivion.Items.Items.Weapons">
             Lists all weapons in the game.
-        </member>
-        <member name="T:ReadyM.Relay.Common.Oblivion.ServerRpcManifest">
-            <exclude/>
-            <summary>
-            Single source of truth for server RPC code assignment in this mod.
-            Referenced by both the server handler and client event generators.
-            Set <see cref="P:ReadyM.Relay.Common.Oblivion.ServerRpcManifest.Offset"/> once at mod startup before any InitRpc() runs:
-            <code>
-              ServerRpcManifest.Offset = offsetProvider.GetNextOffset(ServerRpcManifest.TotalEventCount);
-            </code>
-            </summary>
-        </member>
-        <member name="F:ReadyM.Relay.Common.Oblivion.ServerRpcManifest.Id">
-            <summary>
-            Stable identity of this contract set (the declaring assembly's name). Offsets are
-            assigned in Id order, so every process agrees regardless of mod load order.
-            </summary>
         </member>
     </members>
 </doc>

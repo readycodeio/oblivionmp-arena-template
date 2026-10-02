@@ -28,7 +28,7 @@
             </summary>
         </member>
         <member name="P:ReadyM.Api.Multiplayer.Client.IRelayClient.RequestedActiveCells">
-            <summary>List of cells that are requested to be set as active or a null if there is no request in progress.</summary>
+            List of cells that are requested to be set as active or a null if there is no request in progress.
             <remarks>An empty list means that a request to deactivate all cells is in progress.</remarks>
         </member>
         <member name="E:ReadyM.Api.Multiplayer.Client.IRelayClient.OnStart">
@@ -235,6 +235,13 @@
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ConflictResolution.IChangeTrackingStore">
             <exclude />
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.ECS.Archetypes.ArchetypeShapes">
+            What the archetypes every game has are called in the SDK.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.ECS.Archetypes.WellKnownArchetype">
+            The archetypes the server owns and a mod can add to.
+            <exclude/>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ECS.Components.AreaScopeComponent">
             <summary>
@@ -478,6 +485,7 @@
         <member name="P:ReadyM.Api.Multiplayer.ECS.Systems.SendComponentDeltaSystemBase`1.SendApiDeltasToOwner">
             When true, components touched by the API (ChangedFromApi) additionally have their delta
             sent to the entity's own owner, so the server can authoritatively override the owner's state.
+            An entity the server owns itself has no remote owner to override, so it never gets that copy.
             Defaults to false; the server overrides it.
         </member>
         <member name="M:ReadyM.Api.Multiplayer.ECS.Systems.SendComponentDeltaSystemBase`1.SendToOwner(ReadyM.Api.Idents.PlayerId,LiteNetLib.Utils.NetDataWriter,ReadyM.Api.Multiplayer.ECS.Systems.SendContext)">
@@ -565,32 +573,107 @@
         <member name="T:ReadyM.Api.Multiplayer.Interop.Chunks5">
             <exclude/>
         </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.ResolveArchetypeDelegate">
+            The id this game already gave the shape, or -1 when it registers no archetype for it.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.AddArchetypeExtensionDelegate">
+            Adds one component to an archetype the server owns, both named by their full type name.
+        </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.CreateLocalEntityDelegate">
-            <summary>Creates a server-only entity: no metadata, never replicated to clients.</summary>
+            Creates a server-only entity: no metadata, never replicated to clients.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.CreateLocalEntityInScopeDelegate">
+            Creates a server-only entity in a scope: the entity is removed when the scope is.
+            <remarks>Returns a default identity when the scope is gone.</remarks>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.CreateNetworkedEntityInScopeDelegate">
+            Creates a replicated server-only entity in a scope.
+            Its owner is the server unless an override is passed.
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.DeleteNetworkedEntityDelegate">
-            <summary>1 if the entity existed and was deleted, else 0.</summary>
+            1 if the entity existed and was deleted, else 0.
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.DeleteEntityTreeDelegate">
-            <summary>Deletes an entity together with every entity below it in the tree.</summary>
+            Deletes an entity together with every entity below it in the tree.
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.SetParentDelegate">
-            <summary>
             Makes the child belong to the parent. Returns the index it took among the parent's children,
             or -1 if it already was one of them.
-            </summary>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.GetParentDelegate">
-            <summary>0 when the entity has no parent.</summary>
+            0 when the entity has no parent.
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.GetChildrenDelegate">
-            <summary>
             Writes the parent's child ids into the buffer and returns how many children it has, which can
             exceed the capacity. Nothing is written when the buffer is too small.
-            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.IsEntityAliveDelegate">
+            1 when the entity is in the world, else 0. The mod host has no store of its own, so
+            validity of a handle it kept across ticks can only be answered here.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.GetComponentSlotDelegate">
+            Locates one component of one entity, the same way a chunk slot is located: by address when the
+            AOT side owns it, by heap handle and index when a mod does.
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.ChangedFromApiDelegate">
-            <summary>1 if the component was changed from the API (a server override), else 0.</summary>
+            1 if the component was changed from the API (a server override), else 0.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.ChunkComponent">
+            Single component slot of an archetype chunk.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ChunkComponent.Data">
+            Address of element 0, set when the AOT side owns the array. Those live in the pinned object
+            heap, so the address stays valid for as long as the mod side holds it.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ChunkComponent.HeapSelf">
+            GCHandle of the mod's own <c>TypedComponentHeap</c>, set when the mod owns the array. Zero
+            otherwise. A mod component may hold managed references and therefore cannot be pinned, so no
+            address for it is allowed to leave its runtime. The mod side resolves this handle and walks
+            the array through a tracked ref, which the GC updates if it relocates the array.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ChunkComponent.Stride">
+            Bytes per element as the owning side sees it.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.ComponentSlot">
+            One component of one entity, located the same way a <see cref="T:ReadyM.Api.Multiplayer.Interop.ChunkComponent"/> is. Both fields
+            zero means the entity is gone or does not carry the component.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ComponentSlot.Data">
+            Address of the component, set when the AOT side owns it.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ComponentSlot.HeapSelf">
+            GCHandle of the mod's own <c>TypedComponentHeap</c>, set when a mod owns it.
+        </member>
+        <member name="F:ReadyM.Api.Multiplayer.Interop.ComponentSlot.Index">
+            Index within that heap. Meaningful only alongside <see cref="F:ReadyM.Api.Multiplayer.Interop.ComponentSlot.HeapSelf"/>.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.ChunkCallback">
+            Chunk callback for a query of any arity. <paramref name="comps"/> holds <paramref name="n"/>
+            slots in the order the components were requested, and <paramref name="entities"/> points at
+            <paramref name="count"/> <see cref="T:Friflo.Engine.ECS.RawEntity"/> values.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.QueryDelegate">
+            Runs a query over <paramref name="n"/> component ids, one chunk callback per archetype.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.SetComponentDelegate">
+            Writes a whole component, which is required for updating indices.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.FindByIndexDelegate">
+            The entity whose indexed component holds this value. Returns 0 when none does.
+            <remarks>The value arrives as its own bytes, so only an unmanaged key can be asked for.</remarks>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.EntityListCallback">
+            <summary>Receives the entities a scoped query matched, all at once.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.QueryInScopeDelegate">
+            <summary>
+            The entities a scope holds that carry every requested component.
+            </summary>
+            <remarks>
+            Answered from the scope's own links rather than by scanning the world, so it costs what the
+            scope holds. The result is a list of entities rather than chunks: the matches are scattered
+            through each archetype, so there are no contiguous runs to hand back.
+            </remarks>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Interop.SizeOfHelper`1">
             <exclude/>
@@ -605,6 +688,13 @@
              <exclude/>
             <remarks>
              Called by the host right after it creates an entity, so the mod can run <c>INativeInit.Init</c> for its own components.
+             </remarks>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.Interop.EntityDeletedDelegate">
+             <exclude/>
+            <remarks>
+             Called by the host just before it deletes an entity, so the mod can run what its shapes asked to
+             run as one goes. Unlike creation, this runs for every entity, replicated ones included.
              </remarks>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Protocol.CustomRelayEventHeader">
@@ -808,9 +898,21 @@
             All RPC handlers are already doing this, there is no need to call this method manually.
             </summary>
         </member>
+        <member name="T:ReadyM.Api.Multiplayer.RPC.RpcSide">
+            Which half of an RPC a class implements, which decides the container it belongs in.
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.RPC.RpcHandlerRegistry">
+            Holds the [RpcHandlersFor] classes a loaded assembly declared.
+        </member>
+        <member name="M:ReadyM.Api.Multiplayer.RPC.RpcHandlerRegistry.Declare``1(ReadyM.Api.Multiplayer.RPC.RpcSide)">
+            <summary>Called by generated code for a class carrying [RpcHandlersFor].</summary>
+        </member>
+        <member name="M:ReadyM.Api.Multiplayer.RPC.RpcHandlerRegistry.RegisterAll(ReadyM.Api.DI.IDependencyContainer,ReadyM.Api.Multiplayer.RPC.RpcSide)">
+            <summary>Registers every class declared for one side as a singleton, the way a [Service] is.</summary>
+        </member>
         <member name="T:ReadyM.Api.Multiplayer.RPC.ServerRpcClient">
             <summary>
-            Base class for server-defined RPC handlers.
+            Base class for RPC handlers.
             </summary>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.Serialization.IRelaySerializer">
@@ -837,37 +939,45 @@
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ClientToServerAttribute">
             <summary>
-            Client-to-server (request) leg of a contract method: generates a Send on the client and an
-            On(RpcContext, ...) handler on the server. Different-shaped two-way RPCs are two overloads
-            (one per direction); identical-shape two-way is one method with both attributes. Every contract
-            method needs at least one direction attribute.
+            Generates a Send(...) on the client and an On(...) handler on the server.
             </summary>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ServerToClientAttribute">
             <summary>
-            Server-to-client (response/push) leg of a contract method: generates a Send(PlayerId, ...) on
-            the server and an On(...) handler on the client. See <see cref="T:ReadyM.Api.Multiplayer.ClientToServerAttribute"/>.
+            Generates a Send(...) on the server and an On(...) handler on the client.
             </summary>
+        </member>
+        <member name="T:ReadyM.Api.Multiplayer.ClientToClientsAttribute">
+            <summary>
+            Generates a Send(...) and an On(...) handler on the client.
+            </summary>
+            <param name="relayMode">Determines which other clients receive the message.</param>
+        </member>
+        <member name="M:ReadyM.Api.Multiplayer.ClientToClientsAttribute.#ctor(ReadyM.Api.Multiplayer.Protocol.Enums.RelayMode)">
+            <summary>
+            Generates a Send(...) and an On(...) handler on the client.
+            </summary>
+            <param name="relayMode">Determines which other clients receive the message.</param>
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ServerRpcContractsAttribute">
             <exclude />
         </member>
         <member name="T:ReadyM.Api.Multiplayer.ServerRpcForAttribute">
             <summary>
-            Binds an RPC class (server <c>ServerRpcHandlersBase</c>, client <c>ServerRpcClient</c>) to the
-            <see cref="T:ReadyM.Api.Multiplayer.ServerRpcContractsAttribute"/> class it implements, and is required on both.
-            A project may reference several contract sets, directly or transitively; this is what tells the
-            generator which one to emit against. Only the legs declared by the named class are generated,
-            so one contract set per RPC class.
+            Binds an RPC class to the <see cref="T:ReadyM.Api.Multiplayer.ServerRpcContractsAttribute"/> class it implements, and is
+            required on both sides. The class needs no base: the generated half supplies the right one for
+            the side it is compiled on. A project may reference several contract sets, directly or
+            transitively; this is what tells the generator which one to emit against. Only the legs declared
+            by the named class are generated, so one contract set per RPC class.
             </summary>
         </member>
         <member name="M:ReadyM.Api.Multiplayer.ServerRpcForAttribute.#ctor(System.Type)">
             <summary>
-            Binds an RPC class (server <c>ServerRpcHandlersBase</c>, client <c>ServerRpcClient</c>) to the
-            <see cref="T:ReadyM.Api.Multiplayer.ServerRpcContractsAttribute"/> class it implements, and is required on both.
-            A project may reference several contract sets, directly or transitively; this is what tells the
-            generator which one to emit against. Only the legs declared by the named class are generated,
-            so one contract set per RPC class.
+            Binds an RPC class to the <see cref="T:ReadyM.Api.Multiplayer.ServerRpcContractsAttribute"/> class it implements, and is
+            required on both sides. The class needs no base: the generated half supplies the right one for
+            the side it is compiled on. A project may reference several contract sets, directly or
+            transitively; this is what tells the generator which one to emit against. Only the legs declared
+            by the named class are generated, so one contract set per RPC class.
             </summary>
         </member>
         <member name="P:ReadyM.Api.Multiplayer.ServerRpcForAttribute.ContractsType">

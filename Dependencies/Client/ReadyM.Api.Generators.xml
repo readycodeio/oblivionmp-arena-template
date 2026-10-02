@@ -4,6 +4,862 @@
         <name>ReadyM.Api.Generators</name>
     </assembly>
     <members>
+        <member name="T:ReadyM.Api.Generators.Analyzers.ReplicatedWriteAnalyzer">
+            Reports a client writing a replicated value straight through its setter.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Analyzers.ReplicatedWriteAnalyzer.Authoring(Microsoft.CodeAnalysis.ISymbol)">
+            Whether the write sits in a create handler, where the shape is authoring its own entity.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Analyzers.ReplicatedWriteAnalyzer.InsideMapping(Microsoft.CodeAnalysis.SyntaxNode,Microsoft.CodeAnalysis.SemanticModel,System.Threading.CancellationToken)">
+            Whether the write sits in a handler handed to a mapping.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Analyzers.StructuralChangeInQueryAnalyzer">
+             <summary>
+             Reports growing the world from inside a query, which the SDK refuses at run time.
+             </summary>
+             <remarks>
+             A query holds the component storage it was handed when the loop started. Growing an archetype
+             allocates a new array and copies, so a loop that carries on reading and writing through the chunk
+             addresses whatever nothing points at any more. That went unnoticed for a while because it loses
+             writes silently rather than failing, which is why it is worth catching at the call site instead of
+             on the tick it first matters.
+            
+             It reads the loop as written, so it sees the direct case and not one reached through a method or a
+             delegate. The run-time refusal is what covers the rest; this only moves the common case earlier.
+             </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Analyzers.StructuralChangeInQueryAnalyzer.Grows(Microsoft.CodeAnalysis.IMethodSymbol)">
+            The calls that grow the world. Deleting is absent because a query may ask for it, and an
+            entity's components are fixed at creation, so creating is the only way left to grow one.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Analyzers.StructuralChangeInQueryAnalyzer.EnclosingQuery(Microsoft.CodeAnalysis.SyntaxNode,Microsoft.CodeAnalysis.SemanticModel,System.Threading.CancellationToken)">
+            <summary>
+            The loop this call sits in, if it walks a query.
+            </summary>
+            <remarks>
+            A lambda or a local function ends the search: its body may well run somewhere else, and
+            guessing would turn a lint into a compile error someone cannot argue with.
+            </remarks>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.AccessorEmitter">
+            <summary>
+            Emits the accessor class that stands between a declaration and anyone who includes it.
+            </summary>
+            <remarks>
+            The component behind a mixin is private to the assembly that declared it, so an archetype in
+            another assembly cannot name it. It calls these methods instead, which is also what lets the
+            declaring assembly move a value to a different component without breaking a compiled consumer:
+            only these signatures are promised, not the storage behind them.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.ChunkMembers(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.AccessorModel,System.String,ReadyM.Api.Generators.Archetypes.ChunkNames,System.Boolean,System.Boolean,System.Boolean)">
+            <summary>
+            The same values reached off a chunk instead of an entity. Only the declaring assembly can
+            name the component, which is why the reinterpret happens here rather than in the view.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.Forward(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String)">
+            <summary>A member of the component itself, reached through a handle.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.ChunkForward(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String,ReadyM.Api.Generators.Archetypes.ChunkNames)">
+            <summary>The same member, reached off a chunk.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.Get(ReadyM.Api.Generators.Archetypes.IncludeModel,ReadyM.Api.Generators.Archetypes.AccessorModel)">
+            Calls that a consumer in any assembly can make.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.Forwarded(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String,System.String)">
+            <summary>A forwarded member on the shape, passing the handle it holds.</summary>
+            <param name="name">
+            What the member is called here, which an include puts its prefix in front of. The accessor
+            class it is reached through keeps the name the declaring shape gave it.
+            </param>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.Marker(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel)">
+            What tells a call that changes a collection from one that reads it, which is what the
+            analyzer reads and what nothing else can tell from a method name.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.ForwardedFromChunk(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String,System.String,System.String)">
+            <summary>The same, on a chunk view, which passes the chunk and the row it sits on.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorEmitter.Marked(ReadyM.Api.Generators.Archetypes.AccessorModel,System.Boolean)">
+            Writing one value of a replicated component. A native collection has no property to assign:
+            the replicated emitter gives it a setter method, which copies the contents rather than taking
+            the collection itself.
+            Whether the write goes through the component's masks. A native collection has its own
+            mutators rather than one setter, so it keeps the direct path until they get the same
+            treatment.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ArchetypeGenerator">
+            <summary>
+            Completes an <c>[Archetype]</c> struct: the component its own accessors live in, everything its
+            includes contribute, and the conversions between it and the archetypes it includes.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeGenerator.EmitForwards(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            <summary>Collections of everything included, flattened onto the archetype.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeGenerator.EmitIncluded(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,System.Boolean)">
+            <summary>Accessors of everything included, flattened onto the archetype.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeGenerator.EmitConversions(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            <summary>
+            Including an archetype gives a conversion up, always allowed, and a checked one back down.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ArchetypeMixinGenerator">
+            <summary>
+            Completes a <c>[ArchetypeMixin]</c> struct: the component its values live in, and the accessors
+            reading them.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.AccessorModel">
+            One partial property an author declared on a mixin or archetype.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorModel.#ctor(System.String,System.String,System.Boolean,System.String)">
+            One partial property an author declared on a mixin or archetype.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.IsIndex">
+            <summary>Whether [Index] marks this as the value the shape is found by.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.IsNativeContainer">
+            Whether the value is a native collection. A replicated component gives one of those a family
+            of methods rather than a property, because handing back the collection itself would let a
+            caller change it without the component noticing.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.Accessibility">
+            How the shape declared the value. A native collection stays private, so a mod reaches it
+            only through its own members and cannot take the collection itself and change it unnoticed.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.IsExposed">
+            Whether the value is reachable from outside the shape under its own name.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.Field">
+            <summary>The member holding the value: a generated field, or one of an explicit component.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.Declared">
+            <summary>Set only while the declaration is in this compilation, which is when it can be checked.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.FieldEntry">
+            What the component's Fields class calls this value. A generated component turns the shape's
+            own name into the property, and one named by [ExplicitComponent] already had its own.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.Narrows">
+            Whether the value sits in the component as a base type of the one the shape declared, which
+            is how a shape gives a game's own storage the type a mod actually works with.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.AccessorModel.Cast">
+            The declared type as an `as` operand, which cannot carry a nullable annotation.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorModel.Read(System.String)">
+            The read expression for this value, narrowed where the shape declared a derived type. A
+            value that does not fit reads as null rather than throwing, which is what a shape sitting on
+            storage shared by several kinds of entity needs.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorModel.Target(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.IPropertySymbol)">
+            <summary>The field or property an explicit component holds this value in, matched by name.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.AccessorModel.NarrowsFrom(Microsoft.CodeAnalysis.IPropertySymbol,Microsoft.CodeAnalysis.ISymbol)">
+            Whether the shape declared a type the component's own member can be narrowed to.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ForwardModel">
+            <summary>One member of an explicit component, forwarded onto the shape unchanged.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ForwardModel.Passed(Microsoft.CodeAnalysis.RefKind)">
+            How the parameter is passed, which the forwarded member has to repeat both where it is
+            declared and where it hands the argument on. TryGet takes its value out.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ForwardModel.#ctor(System.String,System.String,System.Collections.Generic.IReadOnlyList{System.ValueTuple{System.String,System.String,System.String}},System.Boolean,System.String,System.String,System.String)">
+            For a member of a component that is being generated, and so has no symbol to read.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ForwardModel.Changes">
+            The Fields entry this member changes, for one that changes anything. A member reached off a
+            component the shape borrows says nothing here: the entry is that component's to name.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ForwardModel.Collection">
+            The token a caller reaches the collection through instead, for the message that says so.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ForwardModel.Owns">
+            <summary>The collection this member belongs to, by the name the shape gave it.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ForwardModel.Named(System.String)">
+            <summary>
+            What the member is called where a prefix renames it.
+            </summary>
+            <remarks>
+            A collection's name sits inside the member rather than at the front of it, so under the
+            prefix Guest, GetNames is GetGuestNames. Putting the prefix in front would give GuestGetNames,
+            which reads as a different verb and no longer matches the collection it belongs to.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ForwardModel.Signature">
+            <summary>The declaration, without the leading accessibility or the body.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ForwardModel.Declaration(System.String)">
+            The same declaration under another name, which is what an extension needs when a prefix
+            keeps two mods' members apart.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ForwardModel.Separator">
+            Whether anything has to go between the receiver and the forwarded arguments.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ForwardModel.ParametersAfter(System.String)">
+            <summary>The same parameters, after whatever the caller has to pass first.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.IncludeModel">
+            <summary>One entry of an <c>[Include]</c> or <c>[IncludeArchetype]</c> on an archetype.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.IncludeModel.#ctor(Microsoft.CodeAnalysis.INamedTypeSymbol,ReadyM.Api.Generators.Archetypes.IncludeKind,System.String)">
+            <summary>One entry of an <c>[Include]</c> or <c>[IncludeArchetype]</c> on an archetype.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.IncludeModel.Prefix">
+            Put in front of every member this include brings, for a name that would otherwise read
+            oddly or clash with another include's. <c>ParentCell</c> turns <c>X</c> into
+            <c>ParentCellX</c>.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.IncludeModel.Named(System.String)">
+            <summary>What a member this include brings is called on the shape that took it.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.IncludeModel.Named(ReadyM.Api.Generators.Archetypes.ForwardModel)">
+            <summary>The same for a forwarded member, whose prefix may belong inside the name.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.IncludeModel.Accessors">
+            <summary>The class a consumer goes through, wherever the declaration was compiled.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.IncludeModel.IsReplicated">
+            Whether what it brings goes over the wire, which decides what a write through it means.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ComponentOwner">
+            <summary>One entry in a shape's component set: a declaration's component, or its marker.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentOwner.#ctor(ReadyM.Api.Generators.Archetypes.IncludeModel,System.Boolean)">
+            <summary>One entry in a shape's component set: a declaration's component, or its marker.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ComponentOwner.Include">
+            Null when it belongs to the declaration itself rather than to something it includes.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.Propagation">
+            Mirrors <c>ReadyM.SDK.Attributes.Propagation</c>: a generator cannot reference the SDK, and the
+            attribute argument arrives as that enum's index, so the order of these has to stay the same.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.Delivery">
+            Mirrors <c>ReadyM.SDK.Attributes.Delivery</c>: a generator cannot reference the SDK, and the attribute
+            argument arrives as that enum's index, so the order of these two has to stay the same.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.DeclarationModel">
+            <summary>
+            What the generators need to know about one declaration, read from symbols only.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.CollectionMembers">
+            The collection members of a component this shape is having generated. A component that
+            already exists contributes through [ExplicitCollection] instead, and one that does not
+            replicate holds a plain field with no members to carry.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Collections">
+            <summary>Members of the explicit component named by [ExplicitCollection].</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.CreateHandlers">
+            <summary>What the shape asked to run as one of its entities is created.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.DeleteHandlers">
+            <summary>What the shape asked to run just before one of its entities goes.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Forwards">
+            <summary>Everything those members offer, mirrored onto this shape.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Extends">
+            Archetypes this shape is added to when they are created.
+            <summary>Archetypes this shape is added to on create, and the prefix its members take.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Header">
+            The struct header a generated part has to agree with.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.ExplicitComponent">
+            <summary>The component named by [ExplicitComponent], or null when one is generated.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.HasReplicatedAttribute">
+            Whether [Replicated] is on the declaration. Kept apart from <see cref="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IsReplicated"/> so a
+            rule can tell asking to replicate from replicating because the component already does.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Propagation">
+            How its values travel between the game and the ECS, and who may write them. Only a
+            replicated shape has any say: a local one is the mod's own business either way.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.Delivery">
+            How this shape's changes travel, when it replicates at all.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IsReplicated">
+            Whether this shape's values reach the other side. A shape says so with [Replicated], or says
+            nothing and inherits it from a component that is already networked.
+            <remarks>
+            A shape holding no values replicates nothing whatever it asks for: there is no component to
+            carry, and its presence travels with the entity instead.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.RegistersReplication">
+            Whether this shape is the one that tells the host about its component.
+            <remarks>
+            Only for a component the shape had generated. A component named by [ExplicitComponent]
+            belongs to whoever declared it: it may already be one the host registered itself, and
+            registering it again as a mod component is both wrong and, for a large one, refused.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IndexAccessor">
+            <summary>The accessor [Index] marks, for a shape whose component is generated.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IndexedBy">
+            <summary>
+            What this shape is found by, taken from [Index] or from the component it already has.
+            </summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.HasOwnComponent">
+            Only a declaration with accessors of its own needs a component to keep them in.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.EmitsComponent">
+            <summary>False when the storage already exists, in which case nothing is emitted for it.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IsArchetype">
+            <summary>Only an archetype gets a marker: a mixin is found by the component it carries.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.NeedsMarker">
+            <summary>
+            An archetype carrying storage it does not own gets no marker: the entities it describes are
+            created by whoever owns that storage, and would never carry one.
+            </summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.IsScope">
+            <summary>Whether the author declared this shape a scope, by naming IScope on their own part.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.ComponentOwners">
+            <summary>
+            Every declaration contributing a component, in the order the component set lists them: this
+            one's own component first, then each include expanded the same way.
+            </summary>
+            <remarks>
+            Null stands for this declaration's own component; anything else is the include that owns it.
+            Duplicates are dropped keeping the first, because <c>ComponentSet.Combine</c> does the same
+            and the two orders have to agree exactly or a chunk view reads the wrong bytes.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.SupportsChunks">
+            <summary>
+            Whether every component this shape carries can be reached from a chunk.
+            </summary>
+            <remarks>
+            The order is always known, since there are no optional includes and an included archetype is
+            flattened in the order its own set lists them. What can still stop it is a contributor
+            declared in an assembly compiled without the server SDK, which has no chunk accessors.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.Contributors">
+            <summary>
+            Every declaration whose component this shape carries, itself included when it has one.
+            </summary>
+            <remarks>
+            Walks includes transitively, so a contributor from an assembly without the server SDK is
+            caught however deep it sits. Including an archetype that has no components of its own is not
+            a problem: it simply contributes nothing.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.DeclarationModel.HasChunkAccessors">
+            <summary>
+            Whether this declaration's values can be reached from a chunk at all.
+            </summary>
+            <remarks>
+            One declared here will have the accessors emitted alongside it. One that arrived as metadata
+            only has them if the assembly that declared it was itself compiled against the server SDK, so
+            the accessor class is what has to be asked.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.FlattenedForwards">
+            <summary>The forwards a mixin contributes, flattened onto whatever includes it.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.FlattenedAccessors">
+            <summary>
+            The accessors a mixin contributes, flattened onto whatever includes it, transitively through
+            included archetypes. A name already taken by the archetype itself wins.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.ReadAccessors(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            The accessors declared directly on a type, never the ones it inherited by including something.
+            </summary>
+            <remarks>
+            A declaration in this compilation states them as partial properties. One that arrived as
+            metadata has them compiled, and its flattened accessors look exactly the same, so the accessor
+            class is what tells them apart: it carries a Get method per accessor the type owns.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.ReadForwards(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.INamedTypeSymbol,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>
+            What a named collection offers, taken from the component itself so the shape gains exactly
+            the same members. The plumbing a networked component carries alongside them is left out: it
+            belongs to replication, not to anyone holding the shape.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.Changes(System.String,System.String)">
+            Whether a member of a component changes the named collection rather than reading it. The
+            verbs are the ones the field support puts there, so this reads the same surface it wrote.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.Forwardable(Microsoft.CodeAnalysis.ISymbol,System.String)">
+            <summary>Whether a member of the component is part of the named collection's surface.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.NamesCollection(System.String,System.String)">
+            <summary>
+            Whether the member's name carries the collection's name as a word of its own, which is what
+            the field support does to it: a verb in front, a role behind, and the name itself between.
+            </summary>
+            <remarks>
+            Looking for the name anywhere in the member also catches a value of the component whose own
+            name merely starts with it. A component holding a FaceMorph dictionary alongside a
+            FaceMorphsSourcePath string had the string forwarded as part of the collection, which then
+            collided with the shape's own declaration of it. Naming the members outright would be
+            tighter still, and would drop whatever a hand-written component calls its own.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.IndexOfCollection(System.String,System.String)">
+            <summary>Where the collection's name sits in the member, or -1 when it does not.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.StartsWord(System.String,System.Int32)">
+            A word starts at the front of the name, or where something other than a capital gives way to
+            one. Anything else is the middle of a longer word, which is not this collection.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.LocationOfCollection(Microsoft.CodeAnalysis.INamedTypeSymbol,System.String,Microsoft.CodeAnalysis.Location)">
+            <summary>Where [ExplicitCollection] names this collection, so a report lands on it.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeclarationModel.IsPlumbing(System.String)">
+            Names a networked component uses to talk to the replication layer.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ArchetypeNames">
+            <summary>
+            The naming rules every archetype generator agrees on.
+            </summary>
+            <remarks>
+            Roslyn generators cannot see each other's output, and an archetype needs the component a mixin
+            declared elsewhere in the same compilation will get. Deriving the name from the declaration
+            rather than looking it up is what removes that dependency.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Api.Generators.Archetypes.ArchetypeNames.ScopeMarker">
+            Matched against a symbol's ToDisplayString, which carries no global:: prefix.
+        </member>
+        <member name="F:ReadyM.Api.Generators.Archetypes.ArchetypeNames.ServerRpcForAttribute">
+            The 0.x spelling of [RpcHandlersFor], which lives in the multiplayer API rather than here.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.ChunkQueryOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            The class holding the GetEnumerator that puts a shape on the chunk path.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.ViewOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>The chunk-backed twin of a declaration.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.MarkerOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            The component that says an entity was created as this archetype, or as one including it.
+            </summary>
+            <remarks>
+            A component rather than a tag because the server has no tags yet. It is generated and
+            internal, so swapping it for one later is invisible to a mod.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.ComponentOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>The component holding the values of a mixin, or an archetype's own accessors.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.QualifiedComponentOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>The same component, named so it resolves from any namespace.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.QualifiedAccessorsOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            The accessor class a consumer in any assembly goes through.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.HintOf(Microsoft.CodeAnalysis.INamedTypeSymbol,System.String)">
+            <summary>
+            A hint name has to be unique across everything one generator emits, and two declarations in
+            different namespaces may share a simple name, so the namespace is part of it.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ArchetypeNames.FieldOf(System.String)">
+            The field a value is held in, which is its name with a lower first letter. Lowering it can
+            land on a keyword, and a value called Sealed, Class or Event is an ordinary thing for a mod
+            to want, so the name is escaped where it has to be rather than refused.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ChunkCombinationGenerator">
+            <summary>
+            Puts a query over several shapes on the chunk path.
+            </summary>
+            <remarks>
+            A single shape has one declaration to hang its binding off, and a combination has none, so this
+            one is driven by use: it looks for the combinations a compilation actually queries and emits a
+            binding for each. Bounded by what is written rather than by every pair that could be.
+            </remarks>
+        </member>
+        <member name="F:ReadyM.Api.Generators.Archetypes.ChunkCombinationGenerator.MaxArity">
+            Bounded by the composed views that exist in the server SDK.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkCombinationGenerator.HasChunkView(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            Whether the generator emitted a view for this shape in whichever assembly declared it.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ChunkCombinationGenerator.Combination.Queries">
+            <summary>One per half in scope, with the shapes applied to each.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkCombinationGenerator.Combination.Compose(System.Collections.Immutable.ImmutableArray{Microsoft.CodeAnalysis.INamedTypeSymbol},ReadyM.Api.Generators.Archetypes.ChunkNames)">
+            <summary>
+            Flat rather than nested, so a loop deconstructs into as many names as it asked for
+            instead of a head and a tail.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ChunkNames">
+            <summary>
+            The chunk fast path's types, found in the server SDK rather than spelled out here.
+            </summary>
+            <remarks>
+            Written this way because the first version hard-coded the namespace, and moving those types one
+            namespace deeper turned the whole fast path off without a word: every shape quietly fell back to
+            walking identities and only a test counting interop calls noticed. Looking the types up by name
+            inside the assembly means a move cannot desync them, and a reference that is present without them
+            is reported rather than ignored.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ChunkNames.EntityQueries">
+            <summary>
+            One per half the compilation can see. A mod references one, but a project that tests both
+            sees two, and a shape is queryable through either.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ChunkNames.QueryTarget">
+            <summary>
+            One half's query type, and how many shapes it can be asked for.
+            </summary>
+            <remarks>
+            The halves do not go equally far: the client stops at two, since a netstandard2.0 build
+            cannot carry the composed views, and the server goes to six. Emitting a binding for an arity
+            a half does not have would not compile.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkNames.QueryTarget.#ctor(System.String,System.Collections.Immutable.ImmutableArray{System.Int32})">
+            <summary>
+            One half's query type, and how many shapes it can be asked for.
+            </summary>
+            <remarks>
+            The halves do not go equally far: the client stops at two, since a netstandard2.0 build
+            cannot carry the composed views, and the server goes to six. Emitting a binding for an arity
+            a half does not have would not compile.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkNames.ChunkAssemblyReferenced(Microsoft.CodeAnalysis.Compilation)">
+            Whether a compilation could use the fast path at all.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkNames.FindAll(Microsoft.CodeAnalysis.Compilation,System.String)">
+            <summary>
+            Searches every referenced assembly, not just the shared one: the chunk types live there, but
+            the query type a binding hangs off belongs to whichever half the mod is compiled against.
+            </summary>
+            <summary>Every namespace declaring a type of this name, across the halves in scope.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ChunkViewEmitter">
+            <summary>
+            Emits the chunk-backed twin of a declaration: the same properties, reached off a chunk.
+            </summary>
+            <remarks>
+            The slots arrive in the order the component set lists them, which is the declaration's own
+            component first and then one per mixin it includes. That order is only knowable at compile time
+            while every include contributes exactly one component, which is why an optional mixin or an
+            included archetype turns the chunk path off for that declaration rather than guessing.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkViewEmitter.EmitQueryBinding(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,ReadyM.Api.Generators.Archetypes.ChunkNames)">
+            <summary>
+            What actually puts this shape on the chunk path. A foreach over EntityQuery&lt;X&gt; finds no
+            GetEnumerator on the type itself, so it binds an extension, and this one beats the SDK's
+            general one because a non-generic candidate is preferred over a generic one. The view type
+            never appears in anything an author writes.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkViewEmitter.Slots(ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            The component set's order, which is what the query asks the owning side for.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ChunkViewEmitter.Held(System.Collections.Generic.IReadOnlyList{ReadyM.Api.Generators.Archetypes.ChunkViewEmitter.Slot})">
+            <summary>The slots the view actually holds: a marker takes an index but no field.</summary>
+        </member>
+        <member name="P:ReadyM.Api.Generators.Archetypes.ChunkViewEmitter.Slot.IsMarker">
+            <summary>A marker takes a slot but holds nothing, so the view never reads it.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.CollectionAccessEmitter">
+            Emits the wrapper a mapping handler is handed for one collection.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.CollectionAccessEmitter.Of(ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            The collections a shape holds, declared or named on a component it borrows.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.CollectionAccessEmitter.HeldAs(System.Collections.Generic.IReadOnlyList{ReadyM.Api.Generators.Archetypes.ForwardModel},System.String)">
+            What the component holds a borrowed collection in, read off its whole-collection setter.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.CollectionAccessEmitter.Member(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String,System.String)">
+            The member as a collection reads it, with the value name taken back out.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ComponentEmitter">
+            <summary>
+            Emits the component behind a mixin or an archetype's own accessors.
+            </summary>
+            <remarks>
+            Generators cannot be chained, so an archetype cannot declare a component for another generator to
+            finish. Everything a component needs has to be emitted from here. Today that is a plain local
+            component; a networked one will need the mask, change tracking and serialization that
+            <c>DeriveINetworkedComponentGenerator</c> emits today, lifted into this emitter so both entry
+            points produce the same thing.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentEmitter.EmitMarker(ReadyM.Api.Generators.Archetypes.SourceWriter,System.String)">
+            <summary>
+            Carries no values: its presence is the whole message, which is that the entity was created as
+            this archetype or as one including it. That is what makes an archetype with no components of
+            its own queryable, and what makes asking whether an entity is one mean something.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentEmitter.EmitFields(ReadyM.Api.Generators.Archetypes.SourceWriter,System.String,System.Collections.Generic.IReadOnlyList{ReadyM.Api.Generators.Archetypes.AccessorModel})">
+            The values alone, for a component whose other half is emitted by the replicated emitter.
+            <remarks>
+            A hand-written networked component declares its own fields and the emitter adds everything
+            around them. A generated one has nobody to declare them, so they come from here, in a partial
+            the other half completes. The contracts sit on that other half.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentEmitter.Contracts(System.Collections.Generic.IReadOnlyList{ReadyM.Api.Generators.Archetypes.AccessorModel},System.String)">
+            <summary>The extra contracts a component carries beyond being a component.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentEmitter.EmitInit(ReadyM.Api.Generators.Archetypes.SourceWriter,System.Collections.Generic.IReadOnlyList{ReadyM.Api.Generators.Archetypes.AccessorModel})">
+            Creates the collections the component holds. A native collection is a handle to memory
+            nobody has taken yet, so reading or adding before this has run faults. The store calls it
+            once, as the entity is created.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ComponentEmitter.EmitIndexedValue(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.AccessorModel)">
+            Friflo asks the component itself for the value it is indexed by.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.CreateHandlerEmitter">
+            <summary>
+            Registers what a shape asked to run as one of its entities is created.
+            </summary>
+            <remarks>
+            The registration sits inside the shape so it can call a handler the author kept private, which is
+            where a handler belongs: it is the shape's own startup, not an entry point for anyone else.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.CreateHandlerEmitter.EmitWatchPoint(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            Where a service watching this shape hands its handler in. The components a shape is made of
+            never leave the assembly that declared it, and a service watching one may sit anywhere, so
+            the shape hands them over from the inside.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.CreateHandlerEmitter.Resolved(Microsoft.CodeAnalysis.IParameterSymbol)">
+            A handler asks for what it needs by naming it, and the game's services answer.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.DeleteHandlerEmitter">
+            <summary>
+            Registers what a shape asked to run just before one of its entities goes.
+            </summary>
+            <remarks>
+            The registration sits inside the shape so it can call a handler the author kept private, which is
+            where a handler belongs: it is the shape's own teardown, not an entry point for anyone else.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeleteHandlerEmitter.EmitWatchPoint(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            Where a service watching this shape hands its handler in. The components a shape is made of
+            never leave the assembly that declared it, and a service watching one may sit anywhere, so
+            the shape hands them over from the inside.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.DeleteHandlerEmitter.Resolved(Microsoft.CodeAnalysis.IParameterSymbol)">
+            A handler asks for what it needs by naming it, and the game's services answer.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules">
+            Checks a shape whose storage already exists, before anything is emitted against it.
+        </member>
+        <member name="F:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules.Unbound">
+            The generic type as an author writes it in typeof, with its parameters left off.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules.CheckCollections(ReadyM.Api.Generators.Archetypes.DeclarationModel,Microsoft.CodeAnalysis.INamedTypeSymbol,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic},Microsoft.CodeAnalysis.Location)">
+            <summary>
+            A name that forwards nothing is worth reporting: the shape still compiles, and the members the
+            author expected are simply absent, which only shows up where they are called.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules.Registered(Microsoft.CodeAnalysis.Compilation,Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            Whether the ECS knows this instantiation of a generic component. Each closed generic is a
+            component of its own, and the schema only holds the ones an attribute names.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules.Arguments(Microsoft.CodeAnalysis.AttributeData,System.Int32,System.Collections.Immutable.ImmutableArray{Microsoft.CodeAnalysis.ITypeSymbol})">
+            Whether the types an attribute names, after its leading arguments, are the ones asked for.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExplicitComponentRules.Readable(Microsoft.CodeAnalysis.Compilation,Microsoft.CodeAnalysis.ITypeSymbol,Microsoft.CodeAnalysis.IPropertySymbol,Microsoft.CodeAnalysis.ISymbol)">
+            Whether the component's own value can reach the shape: as it stands, or narrowed to the
+            type the shape declared.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter">
+            Puts a mixin's values on the archetypes it extends, so a shape from another mod reads as if it
+            had always carried them.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter.Shape(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,System.String,System.String,System.Boolean)">
+            On the shape itself, which reaches the value the same way its own members do.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter.View(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,Microsoft.CodeAnalysis.INamedTypeSymbol,System.String,System.Boolean)">
+            The same on the archetype's chunk view. The value is not in that chunk, so it is reached
+            through the entity, which is why the remarks say what to write instead in a hot loop.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter.Members(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,ReadyM.Api.Generators.Archetypes.AccessorModel,System.String,System.String,System.Boolean,System.String[])">
+            A getter as a property, and a setter as a method, which C# forces rather than us choosing it.
+            A shape's own setters can be properties: the shape is a readonly struct, so the compiler knows
+            an instance setter takes this by readonly ref and cannot modify the receiver, and it allows the
+            assignment even where the receiver is readonly. It does not carry that over to extension
+            property setters. An in receiver is not enough: assigning through one on a foreach variable is
+            CS1654, and on anything returned by a call CS1612, which is most of where these get used. ref
+            fails harder still, and the only receiver that takes an assignment is a reference type, which
+            means boxing the shape on every access. So the setter is a method until the compiler treats an
+            in extension receiver the way it already treats a readonly struct's own this, which is tracked
+            as https://github.com/dotnet/roslyn/issues/82249. When that lands, the setter can become a
+            property here, added alongside SetX so nothing written against the current surface breaks.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter.Forwarded(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.DeclarationModel,ReadyM.Api.Generators.Archetypes.ForwardModel,System.String,System.String,System.String[])">
+            A member the mixin forwards from its explicit component, most often a native collection's
+            methods. Emitted as-is, so a collection reads and writes on the extended shape exactly as it
+            does on the mixin. These are methods rather than properties, so unlike a setter they work
+            inside a query body too.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendedMemberEmitter.Remarks(ReadyM.Api.Generators.Archetypes.SourceWriter,System.String[][])">
+            One remarks block per member, however many notes went into it.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ExtendsEmitter">
+            Registers a shape against the archetypes it extends, so creating one carries it.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ExtendsEmitter.Accessible(Microsoft.CodeAnalysis.Compilation,System.String)">
+            A target without one leaves Register for the host to call when it loads the mod.
+            <summary>
+            Present is not enough: a netstandard2.0 target has no such attribute of its own, and a
+            polyfill one of its references declares is internal to that assembly, so naming it here
+            would not compile.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.HandleEmitter">
+            <summary>
+            The parts a mixin and an archetype share: the handle they wrap, and accessors that read through
+            the accessor class rather than the component.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.HandleEmitter.ComponentSet(ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            <summary>The set an accessor class exposes: its own component plus whatever it includes.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.HandleEmitter.Keyword(ReadyM.Api.Generators.Archetypes.AccessorModel)">
+            The modifier the declaration used, which the implementing part has to repeat.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.HandleEmitter.Accessor(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Archetypes.AccessorModel,System.String,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <param name="name">
+            What the value is called here, which an include puts its prefix in front of. The accessor
+            class it is read through keeps the name the declaring shape gave it.
+            </param>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.IndexEmitter">
+            Declares a shape as indexed, and registers which component holds the index behind it.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.IndexEmitter.Contract(ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            <summary>The extra contract an indexed shape carries, so a lookup can name it.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.NativeCollectionForwards">
+             What a replicated component exposes for a value that is a native collection.
+             <remarks>
+             The component is generated in the same pass, so its members cannot be read off a symbol: this
+             says what the field support will have put there. It is the one place that knows, and everything
+             that carries a member onward, the accessors, the shape, its chunk view and any archetype it
+             extends, works from the forwards it returns.
+            
+             Reading or replacing the whole collection is left out. The accessors already offer that through
+             the field, and a second overload differing only by <c>in</c> would not compile. So is the
+             replication plumbing, which a shape must never gain.
+             </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.NativeCollectionForwards.Changes(System.ValueTuple{System.String,System.String,System.String},System.String,System.String,System.ValueTuple{System.String,System.String,System.String}[])">
+            A member that changes the collection, which makes it a write like any other.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.NativeInitEmitter">
+            Declares that a shape's component has to be given its memory before anything reads it.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.PropagationContracts">
+            The contract a component carries so the runtime's policy directory can find its policy. The
+            declaration lives on the shape; this is how it reaches the component the shape generates.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator">
+            <summary>
+            Gathers every registration a compilation emits into one entry point a host can call: what a shape
+            adds to an archetype, what it handles as it is created, and every service the assembly declares.
+            </summary>
+            <remarks>
+            Each registration also runs from a module initializer where the target has them, but that only
+            fires once something in the assembly is touched, and a netstandard2.0 target has none at all. A
+            single well-known type gives a loader something to call outright, before any entity exists.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator.Read(Microsoft.CodeAnalysis.GeneratorAttributeSyntaxContext,System.Threading.CancellationToken)">
+            <summary>The registration classes one declaration produces, by the names that emit them.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator.ReadRpcHandlers(Microsoft.CodeAnalysis.GeneratorAttributeSyntaxContext,System.Threading.CancellationToken)">
+            <summary>The registration an RPC class produces, if a generator will complete it.</summary>
+            <remarks>
+            Both sides carry the same attribute and only one of the two generators claims a class, but
+            the registration it writes has the same name either way, so this does not have to know which.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator.ReadModConfig(Microsoft.CodeAnalysis.GeneratorAttributeSyntaxContext,System.Threading.CancellationToken)">
+            The registration a mod's config produces, unless the analyzer refuses the class.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator.ReadModEntry(Microsoft.CodeAnalysis.GeneratorAttributeSyntaxContext,System.Threading.CancellationToken)">
+            The registration a mod's entry point produces, unless the analyzer refuses the class.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.RegistrationAggregatorGenerator.ReadService(Microsoft.CodeAnalysis.GeneratorAttributeSyntaxContext,System.Threading.CancellationToken)">
+            <summary>The registration a service produces, unless the analyzer refuses the class.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ReplicatedComponentModel">
+            Describes a component that does not exist yet, in the terms the replicated emitter speaks.
+            <remarks>
+            A component written by hand is read back off its own symbol. One a shape declares is emitted in
+            the same pass, so there is no symbol to read: its name, accessibility and members are stated
+            here instead. The members do have symbols, since they are the shape's own partial properties,
+            which is what lets the field support decide how each type goes over the wire.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ReplicatedComponentModel.For(ReadyM.Api.Generators.Archetypes.DeclarationModel,Microsoft.CodeAnalysis.Compilation)">
+            Null when the shape cannot be described, which is a shape whose properties are not in this
+            compilation. Nothing can be emitted for one of those anyway.
+        </member>
+        <member name="F:ReadyM.Api.Generators.Archetypes.ReplicatedComponentModel.DefaultMode">
+            Fields, including private ones, which is what a component declared as properties amounts to.
+            The same default a hand-written component takes.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ReplicationEmitter">
+            Declares that a shape's component replicates, and how its changes travel.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ReplicationRules">
+            Checks what a shape asks to replicate, before anything is emitted against it.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.ReplicationRules.CheckPropagation(ReadyM.Api.Generators.Archetypes.DeclarationModel)">
+            What a shape says about propagating, and whether it is in a position to say it.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.SdkRuntime">
+            Which half of the SDK a compilation is for. A client never writes a value straight into a chunk:
+            that path skips the component's policy and its masks, which is the whole of what a client write
+            has to obey. A server writes what it likes, so it keeps them.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Archetypes.SdkRuntime.IsClient(Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptionsProvider)">
+            Defaults to the server, so a build that says nothing keeps everything it had.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.SourceWriter">
+            <summary>
+            A StringBuilder that keeps track of indentation, so emitters can be written as nested blocks
+            rather than as strings carrying their own spaces.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Archetypes.ValuesEmitter">
+            Names each of a shape's values without exposing the component holding it, so an assembly that
+            cannot see the component can still say which value it means.
+        </member>
+        <member name="P:ReadyM.Api.Generators.DeriveTargetInfo.Accessibility">
+            How the component is declared. Given explicitly for a component that is being generated, so
+            it does not have to exist as a symbol before it can be emitted.
+        </member>
+        <member name="P:ReadyM.Api.Generators.DeriveTargetInfo.QualifiedName">
+            The component's own name, qualified. Same reason: a generated component has no symbol to ask.
+        </member>
         <member name="M:ReadyM.Api.Generators.Derive.CSharp.FieldSupport.CSharpFieldTypeSupportImplBase.EmitAutoApiMark(Microsoft.CodeAnalysis.ITypeSymbol,ReadyM.Api.Generators.Derive.CSharp.FieldSupport.CSharpEmitFieldSupportContext)">
             <summary>
             Emits, in a plain setter, a conditional API-flag set: when the thread opted in (server
@@ -21,7 +877,7 @@
             <summary>Signature key for a member, or <c>null</c> for members that cannot be redeclared (e.g. a static ctor).</summary>
         </member>
         <member name="M:ReadyM.Api.Generators.Duplication.MemberSignature.CollectDeclared(Microsoft.CodeAnalysis.INamedTypeSymbol)">
-            <summary>Collects the signature keys and member names the target declares by hand.</summary>
+            Collects the signature keys and member names the target declares by hand.
         </member>
         <member name="T:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest">
              <summary>
@@ -48,7 +904,7 @@
             <summary>The struct whose members are copied. Must be declared in <see cref="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.Compilation"/>.</summary>
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.TargetName">
-            <summary>The name of the struct to produce.</summary>
+            The name of the struct to produce.
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.TargetNamespace">
             <summary>Namespace to produce the target in. Null means the source's namespace.</summary>
@@ -69,10 +925,10 @@
             </summary>
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.ExcludedMemberNames">
-            <summary>Member names never copied.</summary>
+            Member names never copied.
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.CopyAttributes">
-            <summary>Copy attributes sitting on the copied members. Off strips every attribute list.</summary>
+            Copy attributes sitting on the copied members. Off strips every attribute list.
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.CopyTypeAttributes">
             <summary>
@@ -82,7 +938,7 @@
             </summary>
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.CopyDocumentation">
-            <summary>Copy XML documentation comments attached to the copied members.</summary>
+            Copy XML documentation comments attached to the copied members.
         </member>
         <member name="P:ReadyM.Api.Generators.Duplication.TypeDuplicationRequest.CopyInterfaces">
             <summary>
@@ -157,9 +1013,69 @@
         <member name="M:ReadyM.Api.Generators.Duplication.TypeReferenceRewriter.RewriteAll(System.Collections.Generic.IEnumerable{Microsoft.CodeAnalysis.CSharp.Syntax.MemberDeclarationSyntax})">
             <summary>Rewrites a list of members in one pass, dropping any the rewriter removed entirely.</summary>
         </member>
+        <member name="T:ReadyM.Api.Generators.EcsQueryGenerator">
+            <summary>
+            Emits the arity-based query surface of <c>EcsApi</c>: <c>Query</c> and <c>QueryWithEntity</c> for
+            one to six components, each in three flavours (plain, unmanaged state, managed state), plus the
+            matching chunk loops.
+            </summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModConfigAnalyzer">
+            Explains what a <c>[ModConfig]</c> class got wrong before the generator silently writes nothing.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModConfigGenerator">
+            Completes a <c>[ModConfig]</c> class: the registration that tells the SDK which file to fill it
+            from, so it is read out of the mod's own folder before anything asks for it.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModConfigShape">
+            What a class has to look like to be a mod's config, for the generator and the analyzer alike.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Mods.ModConfigShape.FileNameOf(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            The name the attribute gave, or the default where it named none.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Mods.ModConfigShape.IsCreatable(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            What the reader needs of it: new() on a concrete, closed class.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModEntryAnalyzer">
+            Explains what a <c>[ModEntry]</c> class got wrong before the generator silently writes nothing.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Mods.ModEntryAnalyzer.OnlyOne(Microsoft.CodeAnalysis.Diagnostics.CompilationStartAnalysisContext)">
+            <summary>A mod is entered through one class, which is a thing only the whole compilation knows.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModEntryGenerator">
+            Completes a <c>[ModEntry]</c> class: the folder the mod was loaded from, the start the loader
+            calls, and the registration that tells the loader this assembly is a mod at all.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Mods.ModEntryShape">
+            What a class has to look like to be a mod's entry point, for the generator and the analyzer alike.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Mods.ModEntryShape.ReadStart(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
+            The start the loader calls, or null when the entry point declared none it can call.
+        </member>
+        <member name="T:ReadyM.Api.Generators.ReplicatedComponentEmitter">
+             Emits a component that replicates: the dirty and api masks, the change component, the
+             accessors that mark a field changed, and the serialization either side of the wire.
+             <remarks>
+             Lifted out of <c>DeriveINetworkedComponentGenerator</c> so the archetype and mixin generators
+             can reach it too. Generators cannot chain, so a generated component cannot be handed to another
+             generator to finish: every entry point has to emit the whole thing from here.
+            
+             Replicated is the SDK's word for the concept. INetworkedComponent is the runtime contract it
+             compiles down to, and that name is unchanged.
+             </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ReplicatedComponentEmitter.Emit(ReadyM.Api.Generators.DeriveTargetModel,System.String)">
+            A policy is the contract naming who may write the component, or null to leave it unsaid.
+        </member>
+        <member name="T:ReadyM.Api.Generators.RpcRegistrationEmitter">
+            <summary>
+            The registration that puts an RPC class in DI, which both sides emit the same way. A mod names
+            only its contracts, the way a <c>[Service]</c> names nothing at all.
+            </summary>
+        </member>
         <member name="T:ReadyM.Api.Generators.ServerRpcContractGenerator">
             <summary>
-            Runs on the Common project. For classes marked [ServerRpcContracts], emits partial method
+            Runs on the Common project. For classes marked [RpcContracts], emits partial method
             implementations and the ServerRpcManifest (the shared code assignment referenced by both the
             server handler and client event generators). Overloads of a name collapse to one manifest entry
             (one wire code). See <see cref="!:ClientToServerAttribute"/> for the direction rules.
@@ -171,11 +1087,40 @@
             Violations are hard errors.
             </summary>
         </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcContractGenerator.ReportMixedSpace(Microsoft.CodeAnalysis.SourceProductionContext,Microsoft.CodeAnalysis.IMethodSymbol)">
+            <summary>A name is either relayed between clients or routed through the server, never both.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcContractGenerator.ValidateRelayMode(Microsoft.CodeAnalysis.SourceProductionContext,Microsoft.CodeAnalysis.IMethodSymbol)">
+            <summary>The relay modes a mod may ask for, which is not all of them.</summary>
+        </member>
         <member name="T:ReadyM.Api.Generators.ServerRpcEventGenerator">
             <summary>
             Mirror of the server handler generator, on a client mod project. Per RPC name, for each
-            <c>ServerRpcClient</c> class emits the declared legs: request (c-&gt;s) as a Send(...), and
-            response (s-&gt;c) as an On(...) handler + dispatch. A one-way RPC only produces its declared leg.
+            <c>[RpcHandlersFor]</c> class emits the declared legs: request (c-&gt;s) as a Send(...), response
+            (s-&gt;c) as an On(...) handler + dispatch, and peer-to-peer (c-&gt;cs) as both. A one-way RPC only
+            produces its declared leg.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcEventGenerator.Transform(Microsoft.CodeAnalysis.GeneratorSyntaxContext,System.Threading.CancellationToken)">
+            The class, plus what its target lets the registration carry. A pair rather than a symbol,
+            so the pipeline is never handed a whole compilation to compare.
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcEventGenerator.HasOwnBase(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            Whether the mod wrote a base of its own. When it did not, the generated half supplies one,
+            which is what lets a class name only the contracts it implements.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcEventGenerator.EmitRelaySender(System.Text.StringBuilder,System.String,System.String,System.String,System.Byte,System.Collections.Generic.List{ReadyM.Api.Generators.ServerRpcEventGenerator.PayloadParam})">
+            <summary>
+            The peer-to-peer sender. The message carries the local player as its sender, so there is
+            nothing to send before the relay has given this client an id.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcEventGenerator.EmitSender(System.Text.StringBuilder,System.String,System.Collections.Generic.List{ReadyM.Api.Generators.ServerRpcEventGenerator.PayloadParam},System.String,System.Boolean)">
+            <summary>
+            The locals carry a prefix nobody would write, since every other name in here comes from the
+            contract and a payload called "writer" would otherwise shadow the one being written to.
             </summary>
         </member>
         <member name="T:ReadyM.Api.Generators.ServerRpcHandlerGenerator">
@@ -183,6 +1128,20 @@
             Runs on a server mod project. Per RPC name, for each <c>ServerRpcHandlersBase</c> class emits the
             declared legs: request (c-&gt;s) as an On(RpcContext, ...) handler + dispatch, and response (s-&gt;c)
             as a Send(PlayerId, ...). A one-way RPC only produces the leg it declares.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcHandlerGenerator.Transform(Microsoft.CodeAnalysis.GeneratorSyntaxContext,System.Threading.CancellationToken)">
+            The class, plus what its target lets the registration carry. A pair rather than a symbol,
+            so the pipeline is never handed a whole compilation to compare.
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcHandlerGenerator.IsServerSide(Microsoft.CodeAnalysis.Compilation)">
+            <summary>Whether this compilation is a server mod, which is what the server SDK being
+            reachable means. A client mod never references it.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcHandlerGenerator.HasOwnBase(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            Whether the mod wrote a base of its own. When it did not, the generated half supplies one,
+            which is what lets a class name only the contracts it implements.
             </summary>
         </member>
         <member name="T:ReadyM.Api.Generators.ServerRpcModel">
@@ -194,7 +1153,7 @@
         </member>
         <member name="M:ReadyM.Api.Generators.ServerRpcModel.TryResolveContracts(Microsoft.CodeAnalysis.SourceProductionContext,Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.INamedTypeSymbol@,Microsoft.CodeAnalysis.INamedTypeSymbol@)">
             <summary>
-            Resolves the contract set an RPC class implements, from its required <c>[ServerRpcFor]</c>.
+            Resolves the contract set an RPC class implements, from its required <c>[RpcHandlersFor]</c>.
             Reports a diagnostic and returns false when the attribute is missing, names a type that is
             not a contracts class, or names one whose assembly has no manifest.
             </summary>
@@ -202,8 +1161,44 @@
         <member name="M:ReadyM.Api.Generators.ServerRpcModel.ManifestNames(Microsoft.CodeAnalysis.INamedTypeSymbol)">
             <summary>The RPC names of a manifest, in its own (authoritative) code order.</summary>
         </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.HasServerRpcFor(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>Whether a class names the contract set it implements, which is what makes it one.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.Implements(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            Whether a generator will complete this class, which is what says a registration exists to
+            collect. The same conditions TryResolveContracts reports on, without reporting anything.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.IsPartial(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            Only half of it is the mod's, so a class that is not partial is not one of these.
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.HandlersFor(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>
+            The attribute binding a class to its contract set. [ServerRpcFor] is the 0.x spelling of
+            [RpcHandlersFor] and is read the same way, so a mod can move over a class at a time.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.HasContractsAttribute(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            <summary>[ServerRpcContracts] is the 0.x spelling of [RpcContracts].</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.ClientToClients(Microsoft.CodeAnalysis.IMethodSymbol)">
+            <summary>The <c>[ClientToClients]</c> on a method, which carries the relay mode, or null.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.RelayModeOf(Microsoft.CodeAnalysis.IMethodSymbol)">
+            <summary>
+            The RelayMode a <c>[ClientToClients]</c> names, as its underlying byte. Zero
+            (AreaOfInterestOthers) when the attribute is there but its argument could not be read.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.ServerRpcModel.IsServerDirected(Microsoft.CodeAnalysis.IMethodSymbol)">
+            <summary>
+            Whether a name travels between clients rather than through the server, which is what decides
+            the code space it is assigned out of. The two cannot be mixed under one name.
+            </summary>
+        </member>
         <member name="M:ReadyM.Api.Generators.ServerRpcModel.CollectContractClasses(Microsoft.CodeAnalysis.INamespaceSymbol)">
-            <summary>All <c>[ServerRpcContracts]</c> classes reachable under <paramref name="ns"/>.</summary>
+            <summary>All <c>[RpcContracts]</c> classes reachable under <paramref name="ns"/>.</summary>
         </member>
         <member name="M:ReadyM.Api.Generators.ServerRpcModel.ResolveDirections(System.Collections.Generic.IEnumerable{Microsoft.CodeAnalysis.INamedTypeSymbol})">
             <summary>
@@ -216,6 +1211,112 @@
         </member>
         <member name="F:ReadyM.Api.Generators.ServerRpcModel.DirectionalRpc.ServerToClient">
             <summary>Response/push (s-&gt;c) method, or null.</summary>
+        </member>
+        <member name="F:ReadyM.Api.Generators.ServerRpcModel.DirectionalRpc.ClientToClients">
+            <summary>Peer-to-peer (c-&gt;cs) method, or null. Never set alongside the other two.</summary>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Services.ServiceAnalyzer">
+            Explains what a <c>[Service]</c> class got wrong before the generator silently writes nothing.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceAnalyzer.NoCycles(Microsoft.CodeAnalysis.Diagnostics.CompilationStartAnalysisContext)">
+            <summary>Refuses update constraints that come back on themselves.</summary>
+            <remarks>
+            Every cycle is caught here, not only the ones inside this assembly: an edge is a typeof, so
+            a cycle spanning assemblies would need those assemblies to reference each other, which C#
+            does not allow. The check at load is a guard for services registered by hand.
+            </remarks>
+        </member>
+        <member name="T:ReadyM.Api.Generators.Services.ServiceCycles">
+            Finds update constraints that come back on themselves, the same way the SDK does at load.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceCycles.Find(System.Collections.Generic.IReadOnlyList{Microsoft.CodeAnalysis.INamedTypeSymbol})">
+            One diagnostic per service in a loop, so the editor marks every one of them.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Services.ServiceGenerator">
+            Completes a <c>[Service]</c> class: the lifetime and the update a game calls, the handlers it
+            watches shapes coming and going with, and the registration that makes it one instance anything
+            can ask for.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceGenerator.Order(ReadyM.Api.Generators.Services.ServiceShape.Ordering)">
+            <summary>What the registration carries, which is nothing where the service said nothing.</summary>
+            <remarks>
+            Written as an array rather than a collection expression, because the mod compiling this may
+            be on an older language version than the SDK.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceGenerator.Switch(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Services.ServiceShape.Service)">
+            The switch anything can read, and what the SDK calls once it has moved it. Enabled has no
+            setter and the state sits in ServiceSwitch rather than here, so a service cannot switch
+            itself behind the back of its own OnEnabled and OnDisabled: the two halves of a partial class
+            are one class, so a field written here would be the service's to write too.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceGenerator.Started(ReadyM.Api.Generators.Archetypes.SourceWriter,ReadyM.Api.Generators.Services.ServiceShape.Service)">
+            Start and the first OnEnabled, in that order: a service is set up before it is told it runs.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceGenerator.Lifetime(ReadyM.Api.Generators.Archetypes.SourceWriter,System.String,Microsoft.CodeAnalysis.IMethodSymbol)">
+            One end of a hosted lifetime. A service may declare only the other one, and the interface
+            still wants both.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceGenerator.Watch(ReadyM.Api.Generators.Archetypes.SourceWriter,System.String,Microsoft.CodeAnalysis.IMethodSymbol,Microsoft.CodeAnalysis.INamedTypeSymbol,System.String)">
+            The shape is what the handler is handed in to, since the component behind it never leaves the
+            assembly that declared it. The service is resolved as the handler runs, not now: the
+            container is still being filled, and the switch is read then for the same reason.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Services.ServiceShape">
+            What a class has to look like to be a service, for the generator and the analyzer alike.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.ReadOrder(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.IMethodSymbol,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
+            <summary>What [UpdateOrder] on the update said, having checked that it can mean anything.</summary>
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.Targets(Microsoft.CodeAnalysis.AttributeData,System.String,Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
+            The services one end of the constraint names, refusing anything that does not tick.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.Updates(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            Whether the type is a service the SDK ticks, which is all that can be ordered against.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.ReadHook(Microsoft.CodeAnalysis.INamedTypeSymbol,System.String,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
+            One duck-typed method the SDK calls, or null when the service declared none it can call.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.Handler(Microsoft.CodeAnalysis.IMethodSymbol,System.String)">
+            The named handler attribute on a method, however it was written, or null for anything else.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.IsShape(Microsoft.CodeAnalysis.INamedTypeSymbol)">
+            Only a shape carries the watch point a service hands its handler in to.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.Hidden(Microsoft.CodeAnalysis.IMethodSymbol)">
+            Everything the SDK calls on a service is the service's own business, so it stays private:
+            the generated half sits inside the class and reaches it anyway.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.OnEnabled">
+            Run as its update starts ticking, which is at startup unless something disabled it.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.OnDisabled">
+            Run once its update has stopped ticking.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.Watching">
+            Shapes it is told about as they are created.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.Leaving">
+            Shapes it is told about just before they go.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.Order">
+            Where its update runs relative to the others.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.Started">
+            Started by the SDK once the host says its game is up. OnEnabled counts, since the first
+            one fires then and a service declaring only that would otherwise not be built to see it.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Service.Disposable">
+            Only a Stop needs the container to dispose it, which is what ends a service.
+        </member>
+        <member name="T:ReadyM.Api.Generators.Services.ServiceShape.Ordering">
+            What [UpdateOrder] said, or what it means to have left it off.
+        </member>
+        <member name="M:ReadyM.Api.Generators.Services.ServiceShape.Ordering.#ctor(System.Int32,System.Collections.Generic.IReadOnlyList{Microsoft.CodeAnalysis.INamedTypeSymbol},System.Collections.Generic.IReadOnlyList{Microsoft.CodeAnalysis.INamedTypeSymbol})">
+            What [UpdateOrder] said, or what it means to have left it off.
+        </member>
+        <member name="P:ReadyM.Api.Generators.Services.ServiceShape.Ordering.IsDefault">
+            Whether anything was said, which is what decides if the registration carries it.
         </member>
     </members>
 </doc>

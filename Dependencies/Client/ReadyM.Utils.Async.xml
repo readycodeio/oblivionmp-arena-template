@@ -53,7 +53,7 @@
             <summary>The managed thread id continuations run on (0 until the first <see cref="M:ReadyM.Utils.Async.PumpedSynchronizationContext.Start(System.Action)"/>/<see cref="M:ReadyM.Utils.Async.PumpedSynchronizationContext.Pump"/>).</summary>
         </member>
         <member name="P:ReadyM.Utils.Async.PumpedSynchronizationContext.HasPendingWork">
-            <summary>Whether any continuations are currently queued.</summary>
+            Whether any continuations are currently queued.
         </member>
         <member name="M:ReadyM.Utils.Async.PumpedSynchronizationContext.Post(System.Threading.SendOrPostCallback,System.Object)">
             <inheritdoc/>

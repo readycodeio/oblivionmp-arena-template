@@ -4,43 +4,164 @@
         <name>ReadyM.Relay.Server.Sdk</name>
     </assembly>
     <members>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ArchetypeRegistry.CreatePostCreateInit(ReadyM.Api.ECS.Worlds.ArchetypeBuilder)">
+        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry">
+            Allows registering components with the ECS system, both local and networked.
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterLocalComponent``1">
+            Registers a local (not replicated over the network) component type with the ECS system.
+            <typeparam name="T">The type of the component to register. Must be a struct.</typeparam>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterLocalComponent(System.Type)">
+            Registers a local (not replicated over the network) component type with the ECS system.
+            <param name="component">The type of the component to register. Must be a struct.</param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterComponent``1(System.Byte)">
+            Registers a networked (replicated over the network) component type with the ECS system.
+            <typeparam name="T">The type of the component to register. Must be a struct that implements <see cref="T:ReadyM.Api.Multiplayer.ECS.Components.INetworkedComponent"/>.</typeparam>
+            <param name="delivery">How its changes travel: 0 reliable, 1 unreliable.</param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterComponent(System.Type,System.Byte)">
+            Registers a networked (replicated over the network) component type with the ECS system.
+            <param name="component">The type of the component to register. Must be a struct that implements <see cref="T:ReadyM.Api.Multiplayer.ECS.Components.INetworkedComponent"/>.</param>
+            <param name="delivery">How its changes travel: 0 reliable, 1 unreliable.</param>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.Components.IModComponentRegistryCallback">
+            <summary>
+            Visits each component a mod declared. The mod-side counterpart of the native registries' callback: it
+            carries the component's type as a generic argument, so an acceptor can do typed work without reflection.
+            </summary>
+            <remarks>
+            An acceptor registered as a filter sees every component, whether it was declared before or after the filter
+            went in. See <see cref="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterFilter(ReadyM.Relay.Server.Sdk.Ecs.Components.IModComponentRegistryCallback)"/>.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModArchetypeRegistry.CreatePostCreateInit(ReadyM.Api.ECS.Worlds.ArchetypeBuilder)">
             <summary>
             Collects the default-value and native-init handlers for everything currently on the builder. Accept replays
             the builder's components once, so the callback has to be reset around it or handlers leak into the next
             archetype.
             </summary>
         </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ComponentRegistry.RegisterLocalComponent``1">
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModArchetypeRegistry.GetComponentIds(ReadyM.Api.ECS.Worlds.ArchetypeBuilder)">
+            Every component id currently on the builder.
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModArchetypeRegistry.GetUnsentComponentIds(ReadyM.Relay.Server.Sdk.Ecs.Components.ModArchetypeRegistry.ArchetypeEntry)">
+            <summary>
+            The component ids on the builder that the host has not been told about yet. Derived by
+            comparing against what was already sent, because the builder always reports its whole set.
+            </summary>
+        </member>
+        <member name="P:ReadyM.Relay.Server.Sdk.Ecs.Components.ModArchetypeRegistry.ExtensionInit">
+            Runs for an entity of an archetype no mod registered, which is where a mod's components
+            sit when it extended one of the game's own archetypes.
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.Components.ModChangeComponentRegistration">
+            <summary>
+            A networked component carries a generated nested <c>ChangeComponent</c> that records which of its fields
+            changed and when. It is a component in its own right, so it has to be declared like one, but a mod author
+            should not have to declare it: it exists because the component is networked.
+            <para>
+            So it is derived here, from every networked component the registry sees. As a filter, which means it does
+            not matter whether this goes in before or after a mod declares its components: a filter is replayed over
+            everything already declared and receives everything declared later.
+            </para>
+            <para>
+            The archetype side does the same thing for the same reason, see
+            <see cref="T:ReadyM.Relay.Server.Sdk.Ecs.Components.ModChangeComponentArchetypeRegistration"/>.
+            </para>
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModChangeComponentRegistration.#ctor(ReadyM.Api.Multiplayer.ECS.Registry.ServerSideSettings)">
+            <summary>
+            A networked component carries a generated nested <c>ChangeComponent</c> that records which of its fields
+            changed and when. It is a component in its own right, so it has to be declared like one, but a mod author
+            should not have to declare it: it exists because the component is networked.
+            <para>
+            So it is derived here, from every networked component the registry sees. As a filter, which means it does
+            not matter whether this goes in before or after a mod declares its components: a filter is replayed over
+            everything already declared and receives everything declared later.
+            </para>
+            <para>
+            The archetype side does the same thing for the same reason, see
+            <see cref="T:ReadyM.Relay.Server.Sdk.Ecs.Components.ModChangeComponentArchetypeRegistration"/>.
+            </para>
+            </summary>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentIds">
+            <summary>
+            Translates a component's .NET type into the numeric id the server uses for it.
+            <para>
+            A mod names a component by type; the server names it by an id it assigns while building the ECS schema,
+            which happens after every mod has declared its components. So the mod cannot work the id out for itself and
+            has to ask, by full type name. This is what does the asking, and caches each answer.
+            </para>
+            <para>
+            It exists only from mod initialization onwards, because the function that answers is part of the second
+            initialization phase. That is the point of it being separate from <see cref="T:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry"/>, which
+            exists in the first phase: declaring a component and knowing its id are two different times, and keeping
+            them in one object meant an object that was only half usable for part of its life.
+            </para>
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentIds.#ctor(System.IntPtr)">
+            <param name="getComponentIdByName">
+            The server's answering function, as an interop pointer. Supplied by the host at mod initialization.
+            </param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentIds.Resolve``1">
+            <summary>
+            The id the server assigned to a component, asked for once and cached.
+            <para>
+            This is the only path, including for components this mod registered itself. Registering merely tells
+            the server the component exists; the id is decided later, when the server registers everything into
+            the schema and reads the result back.
+            </para>
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentIds.Resolve(System.Type)">
+            <inheritdoc cref="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentIds.Resolve``1"/>
+            <param name="type">The component type, for a caller that only knows it at run time.</param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterFilter(ReadyM.Relay.Server.Sdk.Ecs.Components.IModComponentRegistryCallback)">
+            <summary>
+            Adds an acceptor that sees every component, both the ones already declared and the ones still to come.
+            Registering a filter before or after a given component has exactly the same effect, so a filter never
+            has to be ordered against the mods it observes.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.Accept(ReadyM.Relay.Server.Sdk.Ecs.Components.IModComponentRegistryCallback)">
+            <summary>Replays every declared component for one acceptor, without adding it as a filter.</summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterLocalComponent(System.Type)">
+            <summary>
+            Declares a local component known only as a <see cref="T:System.Type"/>. One reflection hop back to the generic
+            call, which the native registry's own by-type overload also needs: a generated nested type cannot be
+            named from the outer type's generic argument.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterLocalComponent``1">
             <summary>
             Registers a mod-defined component type with the server ECS.
             Must be called during <c>ServerModBase.Init()</c>, before any entity creation.
             Returns the component ID to use in all subsequent <c>Query</c> calls.
             </summary>
         </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ComponentRegistry.RegisterComponent``1">
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterComponent``1(System.Byte)">
             <summary>
             Registers a mod-defined component type with the server ECS.
             Must be called during <c>ServerModBase.Init()</c>, before any entity creation.
             Returns the component ID to use in all subsequent <c>Query</c> calls.
             </summary>
         </member>
-        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry">
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.AddArchetypeExtensions(System.Type,System.Collections.Generic.IReadOnlyList{System.Type})">
             <summary>
-            Allows registering components with the ECS system, both local and networked.
+            Adds components to an archetype the game registered, named by the shape it is declared as so a mod never holds an archetype id.
             </summary>
         </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterLocalComponent``1">
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.ModComponentRegistry.RegisterComponent(System.Type,System.Byte)">
             <summary>
-            Registers a local (not replicated over the network) component type with the ECS system.
+            Declares a networked component known only as a <see cref="T:System.Type"/>.
             </summary>
-            <typeparam name="T">The type of the component to register. Must be a struct.</typeparam>
-        </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Components.IComponentRegistry.RegisterComponent``1">
-            <summary>
-            Registers a networked (replicated over the network) component type with the ECS system.
-            </summary>
-            <typeparam name="T">The type of the component to register. Must be a struct that implements <see cref="T:ReadyM.Api.Multiplayer.ECS.Components.INetworkedComponent"/>.</typeparam>
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.EcsApi">
             <summary>
@@ -161,6 +282,73 @@
             <param name="ownerOverride">The owner of the entity.</param>
             <returns>The created entity.</returns>
         </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetAreaScopeEntity(ReadyM.Api.Idents.AreaId,ReadyM.Relay.Server.Sdk.Ecs.Entity@)">
+            <summary>
+            Gets the scope entity of an area: the entity every entity created in that area's scope hangs off.
+            </summary>
+            <param name="areaId">The Area whose scope entity to get.</param>
+            <param name="entity">The area's scope entity, or default when it has none.</param>
+            <returns>Whether the area has a scope entity.</returns>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.GetAreaScopeEntity(ReadyM.Api.Idents.AreaId)">
+            <summary>
+            Gets the scope entity of an area.
+            </summary>
+            <param name="areaId">The Area whose scope entity to get.</param>
+            <returns>The area's scope entity.</returns>
+            <exception cref="T:System.InvalidOperationException">The area has no scope entity.</exception>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateAreaScopeEntity(ReadyM.Api.Idents.AreaId)">
+            <summary>
+            Creates the scope entity of an area, so entities can be created in its scope before any player joins it.
+            Otherwise the server creates it when the first player joins.
+            </summary>
+            <param name="areaId">The Area whose scope entity to create.</param>
+            <returns>The area's new scope entity.</returns>
+            <exception cref="T:System.InvalidOperationException">The area already has a scope entity.</exception>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetCellScopeEntity(ReadyM.Api.Idents.FullCellId,ReadyM.Relay.Server.Sdk.Ecs.Entity@)">
+            <summary>
+            Gets the scope entity of a cell: the entity every entity created in that cell's scope hangs off.
+            </summary>
+            <param name="cellId">The Cell whose scope entity to get.</param>
+            <param name="entity">The cell's scope entity, or default when it has none.</param>
+            <returns>Whether the cell has a scope entity.</returns>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetCellScopeEntity(ReadyM.Api.Idents.AreaId,ReadyM.Api.Idents.CellId,ReadyM.Relay.Server.Sdk.Ecs.Entity@)">
+            <inheritdoc cref="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetCellScopeEntity(ReadyM.Api.Idents.FullCellId,ReadyM.Relay.Server.Sdk.Ecs.Entity@)"/>
+            <param name="areaId">The Cell's area.</param>
+            <param name="cellId">The Cell whose scope entity to get.</param>
+            <param name="entity">The cell's scope entity, or default when it has none.</param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.GetCellScopeEntity(ReadyM.Api.Idents.FullCellId)">
+            <summary>
+            Gets the scope entity of a cell.
+            </summary>
+            <param name="cellId">The Cell whose scope entity to get.</param>
+            <returns>The cell's scope entity.</returns>
+            <exception cref="T:System.InvalidOperationException">The cell has no scope entity.</exception>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.GetCellScopeEntity(ReadyM.Api.Idents.AreaId,ReadyM.Api.Idents.CellId)">
+            <inheritdoc cref="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.GetCellScopeEntity(ReadyM.Api.Idents.FullCellId)"/>
+            <param name="areaId">The Cell's area.</param>
+            <param name="cellId">The Cell whose scope entity to get.</param>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateCellScopeEntity(ReadyM.Api.Idents.FullCellId)">
+            <summary>
+            Creates the scope entity of a cell, so entities can be created in its scope before any player activates it.
+            Otherwise the server creates it when the first player activates the cell. The cell's area needs a scope
+            entity already, see <see cref="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateAreaScopeEntity(ReadyM.Api.Idents.AreaId)"/>.
+            </summary>
+            <param name="cellId">The Cell whose scope entity to create.</param>
+            <returns>The cell's new scope entity.</returns>
+            <exception cref="T:System.InvalidOperationException">The cell already has a scope entity, or its area has none.</exception>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateCellScopeEntity(ReadyM.Api.Idents.AreaId,ReadyM.Api.Idents.CellId)">
+            <inheritdoc cref="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateCellScopeEntity(ReadyM.Api.Idents.FullCellId)"/>
+            <param name="areaId">The Cell's area.</param>
+            <param name="cellId">The Cell whose scope entity to create.</param>
+        </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.CreateLocalEntity(ReadyM.Api.Idents.ArchetypeId)">
             <summary>
             Creates a server-only entity: never replicated, invisible to clients.
@@ -202,7 +390,7 @@
             <returns>The index the child took among the parent's children, or -1 if it already was one.</returns>
         </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.GetParent(System.Int32)">
-            <summary>0 when the entity has no parent.</summary>
+            0 when the entity has no parent.
             <param name="childId">The ID of the child entity.</param>
             <returns>The ID of the parent entity, or 0 if there is no parent.</returns>
         </member>
@@ -212,25 +400,39 @@
             no-GC region is held over raw component pointers.
             </summary>
         </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetComponent``1(System.Int32,``0@)">
+            False when the entity is gone or does not carry the component.
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.ChunkBase``1(ReadyM.Api.Multiplayer.Interop.ChunkComponent@)">
+            <summary>
+            Reference to element 0 of a chunk slot, whichever side owns the array.
+            </summary>
+            <remarks>
+            A mod-owned slot carries its heap's handle rather than an address, because a mod component
+            may hold managed references and so can never be pinned. Resolving it here yields a reference
+            the GC tracks, so the array is free to move while the callback runs. An AOT-owned slot is in
+            the pinned object heap, so its address is used as-is. Both come back as a <c>ref</c>, which
+            is what lets the generated chunk loops be written once for either kind.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.ChunkElement``1(``0@,System.Int32,System.Int32)">
+            <summary>
+            Advances a chunk slot reference by <paramref name="index"/> elements, using the stride the
+            owning side reported rather than this side's view of the struct size.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.SlotRef``1(ReadyM.Api.Multiplayer.Interop.ComponentSlot@)">
+            <summary>
+            Reference to a single component, whichever side owns it. Same contract as the chunk case: a
+            mod-owned component is reached through a tracked ref into the mod's own array, an AOT-owned
+            one through its pinned address.
+            </summary>
+        </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEachEntity`1">
             <exclude />
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEachEntity`2">
             <exclude />
-        </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.QueryWithEntity``1(ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEachEntity{``0})">
-            <summary>
-            Iterates a component along with the entity id it belongs to.
-            </summary>
-        </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.QueryWithEntity``2(ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEachEntity{``0,``1})">
-            <inheritdoc cref="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.QueryWithEntity``1(ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEachEntity{``0})"/>
-        </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.SetComponent``1(System.Int32,``0@)">
-            <summary>Writes a component by entity id.</summary>
-        </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.TryGetComponent``1(System.Int32,``0@)">
-            <summary>False when the entity is gone or does not carry the component.</summary>
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.EcsApi.EmbedForEach`1">
             <exclude />
@@ -296,13 +498,20 @@
             The identifier of the entity.
             </summary>
         </member>
+        <member name="P:ReadyM.Relay.Server.Sdk.Ecs.Entity.RawEntity">
+            <summary>
+            Identity including the revision, which is what tells this entity apart from a later one that took its id.
+            </summary>
+        </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Entity.GetComponent``1">
             <summary>
             Gets a reference to the component of type T associated with this entity.
             </summary>
             <typeparam name="T">Type of the component</typeparam>
             <returns>A mutable reference to the component.</returns>
-            <remarks>Attempting to access a component that does not exist on the entity's archetype will crash your mod.</remarks>
+            <exception cref="T:System.InvalidOperationException">
+            The entity is gone, its id now belongs to another entity, or its archetype does not carry the component.
+            </exception>
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.ModComponentManager">
              <summary>
@@ -319,12 +528,12 @@
         </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.ModComponentManager.RegisterLocalComponent``1">
             <summary>
-            Registers component type T. Returns a ModComponentRegistration to hand to the
+            Registers component type T. Returns a ModComponentInfo to hand to the
             AOT relay's RegisterModComponent. The embedded AllocHeap delegate allocates a
             fresh TypedComponentHeap&lt;T&gt; each time an archetype needs one.
             </summary>
         </member>
-        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.ModComponentManager.RegisterComponent``1">
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.ModComponentManager.RegisterComponent``1(System.Byte)">
             <summary>
             Registers component type T. Returns a PluginComponentRegistration to hand to the
             AOT relay's RegisterPluginComponent. The embedded AllocHeap delegate allocates a
@@ -352,10 +561,10 @@
             <param name="time">Total time since server start, in seconds.</param>
         </member>
         <member name="F:ReadyM.Relay.Server.Sdk.Ecs.Systems.ModSystemBase.UpdateTick.DeltaTime">
-            <summary> The time in seconds since the last tick. </summary>
+            The time in seconds since the last tick. 
         </member>
         <member name="F:ReadyM.Relay.Server.Sdk.Ecs.Systems.ModSystemBase.UpdateTick.Time">
-            <summary> The time at the beginning of the current frame since application start. </summary>
+            The time at the beginning of the current frame since application start. 
         </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.Systems.ModSystemBase.OnUpdate(ReadyM.Relay.Server.Sdk.Ecs.Systems.ModSystemBase.UpdateTick)">
             <summary>
@@ -370,12 +579,29 @@
             <param name="deltaTime">Time since last tick, in seconds.</param>
             <param name="time">Total time since server start, in seconds.</param>
         </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Ecs.IComponentArray">
+            <summary>A component heap's array, reachable without naming the element type.</summary>
+        </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Ecs.TypedComponentHeap`1">
             <summary>
             CoreCLR-side owner of a typed component array. Exposes all mutations through delegates so
             write barriers always fire correctly - even for non-blittable T. The AOT relay holds the
             resulting AOTHeapPointers and dispatches through them; it never writes directly into the array.
             </summary>
+        </member>
+        <member name="M:ReadyM.Relay.Server.Sdk.Ecs.TypedComponentHeap`1.GetRef(System.Int32)">
+            <summary>
+            A tracked reference to an element, for walking the heap from inside this runtime. Unlike a
+            raw address this survives a collection that relocates the array, because the GC rewrites the
+            reference. Use it instead of a pointer whenever T may hold managed references.
+            </summary>
+            <remarks>
+            It protects against relocation, not reallocation: a resize swaps in a new array, so a
+            reference taken before one addresses the old array.
+            </remarks>
+        </member>
+        <member name="P:ReadyM.Relay.Server.Sdk.Ecs.TypedComponentHeap`1.Components">
+            Read fresh every time: a resize swaps in a new array.
         </member>
         <member name="M:ReadyM.Relay.Server.Sdk.Ecs.TypedComponentHeap`1.GetPointers">
             <summary>
@@ -420,6 +646,28 @@
         <member name="T:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers">
             <exclude/>
         </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.Query">
+            <summary>Arity-agnostic query. Supersedes Query1..Query6.</summary>
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.SetComponent">
+            <summary>Writes a whole component, keeping the index the owning side holds for it current.</summary>
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.FindByIndex">
+            Finds the entity whose indexed component holds a value.
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.QueryInScope">
+            The entities a scope holds that carry a component set.
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.CreateLocalEntityInScope">
+            Creates an entity held by a scope.
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.EcsApiPointers.GetComponentIdByName">
+            <summary>
+            Resolves a component id from a full type name. Phase two, deliberately: the host cannot answer until
+            it has built its component table, which happens after the schema is created. Mods only ask when they
+            register an archetype or run a query, both of which are phase two or later.
+            </summary>
+        </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Interop.HostInitParams">
             <exclude/>
         </member>
@@ -428,6 +676,9 @@
         </member>
         <member name="F:ReadyM.Relay.Server.Sdk.Interop.ModPointers.PostCreateEntityInit">
             Invoked by the host after it creates an entity, so mod components can run their native init.
+        </member>
+        <member name="F:ReadyM.Relay.Server.Sdk.Interop.ModPointers.EntityDeleted">
+            Invoked by the host before it deletes an entity, so mod shapes can run their delete handlers.
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Interop.NetworkTimePointers">
             <exclude />
@@ -443,6 +694,18 @@
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Interop.RpcApiPointers">
             <exclude/>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Interop.TryGetAreaScopeEntityDelegate">
+            <summary>1 and the area's scope entity written to <paramref name="entity"/> if it has one, else 0.</summary>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Interop.CreateAreaScopeEntityDelegate">
+            <summary>The area's new scope entity, or default if the area already has one.</summary>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Interop.TryGetCellScopeEntityDelegate">
+            <summary>1 and the cell's scope entity written to <paramref name="entity"/> if it has one, else 0.</summary>
+        </member>
+        <member name="T:ReadyM.Relay.Server.Sdk.Interop.CreateCellScopeEntityDelegate">
+            <summary>The cell's new scope entity, or default if the cell already has one or its area has none.</summary>
         </member>
         <member name="T:ReadyM.Relay.Server.Sdk.Interop.ServerEventsPointers">
             <exclude />
@@ -511,7 +774,7 @@
             </summary>
         </member>
         <member name="P:ReadyM.Relay.Server.Sdk.Rpc.RpcContext.Sender">
-            <summary>The client player who sent this RPC.</summary>
+            The client player who sent this RPC.
         </member>
         <member name="P:ReadyM.Relay.Server.Sdk.ServerModBase.ModDirectory">
             <summary>

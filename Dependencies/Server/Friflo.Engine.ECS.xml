@@ -13,10 +13,7 @@
             <summary>GCHandle (Normal) of the TypedComponentHeap&lt;T&gt; instance.</summary>
         </member>
         <member name="P:Friflo.Engine.ECS.AOTHeapPointers.Stride">
-            <summary>Unsafe.SizeOf&lt;T&gt;() - used by the AOT side for pointer arithmetic on blittable heaps.</summary>
-        </member>
-        <member name="P:Friflo.Engine.ECS.AOTHeapPointers.IsBlittable">
-            <summary>Whether T is blittable and GetPtrToFirst returns a valid pointer.</summary>
+            <summary>Unsafe.SizeOf&lt;T&gt;() - the stride the mod side reports for this component.</summary>
         </member>
         <member name="T:Friflo.Engine.ECS.Archetype">
             <summary>
@@ -334,8 +331,8 @@
         <member name="F:Friflo.Engine.ECS.EntityStoreBase.InternBase.uniqueEntityQuery">
              reused query for <see cref="M:Friflo.Engine.ECS.EntityStoreBase.GetUniqueEntity(System.String)"/>
         </member>
-        <member name="F:Friflo.Engine.ECS.EntityStoreBase.Static.DefaultHeapMap">
-            <summary>All items in the <see cref="F:Friflo.Engine.ECS.EntityStoreBase.Static.DefaultHeapMap"/> are always null</summary>
+        <member name="P:Friflo.Engine.ECS.EntityStoreBase.Static.DefaultHeapMap">
+            <summary>All items in the <see cref="P:Friflo.Engine.ECS.EntityStoreBase.Static.DefaultHeapMap"/> are always null</summary>
         </member>
         <member name="F:Friflo.Engine.ECS.EntityStoreBase.Static.DefaultArchIndex">
             <summary>The index of the <see cref="F:Friflo.Engine.ECS.EntityStoreBase.defaultArchetype"/> - index is always 0</summary>
@@ -594,14 +591,26 @@
             </summary>
         </member>
         <member name="T:Friflo.Engine.ECS.ExternallyManagedHeap">
-             <summary>
-             AOT-side StructHeap backed by a TypedComponentHeap&lt;T&gt; living in the embedded CoreCLR runtime.
-             All mutations are dispatched through function pointers into CoreCLR so write barriers always
-             fire on the managed side. The AOT process never writes into the component array directly.
-            
-             For blittable T, ReadyMGetPtrToFirst() returns a stable pinned pointer for read-only iteration.
-             For non-blittable T, it returns IntPtr.Zero - callers must dispatch through the delegates instead.
-             </summary>
+            <summary>
+            AOT-side StructHeap backed by a TypedComponentHeap&lt;T&gt; living in the embedded CoreCLR runtime.
+            All mutations are dispatched through function pointers into CoreCLR so write barriers always
+            fire on the managed side. The AOT process never writes into the component array directly, and
+            never forms an address into it: a mod component may hold managed references, so the array cannot
+            be pinned, and only the runtime that owns it can safely turn a slot into a reference. Callers
+            name a component by this heap's <see cref="P:Friflo.Engine.ECS.ExternallyManagedHeap.Self"/> handle plus an index instead.
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.ExternallyManagedHeap.Self">
+            <summary>
+            GCHandle of the CoreCLR heap backing this one, for handing to the mod side so it can reach
+            its own array without an address crossing the runtime boundary.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.ExternallyManagedHeap.GetComponentPointer(System.Int32)">
+            <summary>Always throws. Use <see cref="P:Friflo.Engine.ECS.ExternallyManagedHeap.Self"/> and an index instead.</summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.ExternallyManagedHeap.ComponentArray">
+            The AOT side owns this memory, so there is no managed array to hand over.
         </member>
         <member name="T:Friflo.Engine.ECS.ModComponentMarker">
             <summary>
@@ -623,6 +632,11 @@
               for collection.
             </remarks>
         </member>
+        <member name="P:Friflo.Engine.ECS.StructHeap.ComponentArray">
+            <summary>
+            Opaque reference to the component array. Null when this side does not own one.
+            </summary>
+        </member>
         <member name="T:Friflo.Engine.ECS.StructHeap`1">
             <remarks>
             <b>Note:</b> Should not contain any other fields. Reasons:<br/>
@@ -636,6 +650,33 @@
             - it boxes struct values to return them as objects<br/>
             - it allows only reading struct values
             </summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.StructHeap`1.CanPin">
+            <summary>
+            Whether T can live in the pinned object heap. A component holding managed references cannot,
+            and handing a raw pointer to one out is unsound anyway, so those keep the unpinned path.
+            </summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.StructHeap`1.pinned">
+            <summary>
+            Set once <see cref="F:Friflo.Engine.ECS.StructHeap`1.components"/> lives in the pinned object heap. Only a bool, so it adds
+            nothing for the GC to trace, which is what the note above is protecting.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.StructHeap`1.PinComponents">
+            <summary>
+            Moves the component array to the pinned object heap, where it will never be relocated.
+            Called on the first pointer request, so only components something actually takes a pointer
+            to pay for it. Every later resize then allocates pinned as well.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.StructHeap`1.GetComponentPointer(System.Int32)">
+            <remarks>
+            The returned pointer outlives this call, so the array it points into must not move. On
+            net6.0 and up the array is placed in the pinned object heap on first use, which guarantees
+            that. The fallback below pins only for the duration of the <c>fixed</c> block, so its result
+            is valid only while nothing can collect.
+            </remarks>
         </member>
         <member name="M:Friflo.Engine.ECS.StructHeap`1.GetComponentDebug(System.Int32)">
             <summary>
@@ -902,6 +943,121 @@
             Ensures <see cref="F:Friflo.Engine.ECS.StructHeap.structIndex"/> and <see cref="F:Friflo.Engine.ECS.StructInfo`1.Index"/> is less than <see cref="F:Friflo.Engine.ECS.EntitySchema.maxStructIndex"/><br/>
             to make range check redundant when accessing <see cref="F:Friflo.Engine.ECS.Archetype.heapMap"/>[] using an index.
             </remarks>
+        </member>
+        <member name="T:Friflo.Engine.ECS.EntitySchemaHolder">
+            <summary>
+            The single place the process-wide <see cref="T:Friflo.Engine.ECS.EntitySchema"/> lives.
+            <para>
+            The schema is created EXPLICITLY, never implicitly. It must be created after every mod assembly is
+            loaded and every component type is registered, and before the first <see cref="T:Friflo.Engine.ECS.EntityStore"/> exists.
+            Anything that needs the schema earlier gets <see cref="M:Friflo.Engine.ECS.EntitySchemaHolder.NotCreated"/> rather than a silently wrong schema.
+            </para>
+            <para>
+            The schema is immutable and cannot be replaced once set: <see cref="F:Friflo.Engine.ECS.StructInfo`1.Index"/> and the
+            archetype bit sets cache struct indices derived from it, so a second schema would alias unrelated
+            component types onto the same index.
+            </para>
+            <para>
+            Read the synchronization contract on the fields below before adding a lock or a volatile here.
+            </para>
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.EntitySchemaHolder.IsCreated">
+            <summary>Whether the schema has been created. Reading this never creates it.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.EnforceUsageWindow">
+            <summary>
+            Turns on the usage window for this process. With it on, the schema starts unusable when created and
+            becomes usable only between <see cref="M:Friflo.Engine.ECS.EntitySchemaHolder.OpenUsage"/> and <see cref="M:Friflo.Engine.ECS.EntitySchemaHolder.CloseUsage"/>, which must alternate.
+            <para>
+            A test process wants this because a Friflo schema cannot really be torn down and rebuilt, so tests
+            pretend: each one opens a window, uses the schema, and closes it. Touching the schema outside a window
+            then fails where the mistake is, instead of a test quietly depending on what an earlier one left set up.
+            </para>
+            <para>
+            Production never calls this. The window stays permanently open, the read path is unchanged, and there
+            is nothing to pair.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.OpenUsage">
+            <summary>Makes the schema usable. Fails if a window is already open, or if none was ever created.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.CloseUsage">
+            <summary>Makes the schema unusable again. Fails if no window is open.</summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.EntitySchemaHolder.Source">
+            <summary>How the schema was created, or <see cref="F:Friflo.Engine.ECS.EntitySchemaSource.NotCreated"/> if it was not.</summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.EntitySchemaHolder.RepeatsAllowed">
+            <summary>
+            Whether a repeated initialization through the same mechanism is tolerated in this process. Whether a
+            repeat throws depends on it, so anything asserting either behaviour should state which it expects
+            rather than assume.
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.EntitySchemaHolder.DefaultHeapMap">
+            <summary>All items are always null. Sized by the schema's <c>maxStructIndex</c>.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.AllowRepeatedInitialization(System.Action{System.String})">
+            <summary>
+            Downgrades a repeated initialization through the SAME mechanism from a hard failure to a report on
+            <paramref name="onRepeat"/>. A conflict between the two mechanisms stays a hard failure either way:
+            that is never legitimate.
+            <para>
+            Enabling this requires supplying somewhere to report to, so it can never be turned on silently.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.DisallowRepeatedInitialization">
+            <summary>Restores the default, where a repeated initialization is a hard failure.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.Initialize(Friflo.Engine.ECS.EntitySchemaSource,System.Func{System.String},System.Action)">
+            <summary>
+            The only way to create the schema. Everything happens under <c>gate</c>: the check, the build, and
+            the assignment. So every caller leaves with a happens-before edge to the writes, and there is no way
+            to observe "not created" and then act on it unsynchronized.
+            <para>
+            <paramref name="sealSchema"/> runs only if this call is the one that creates the schema, and must
+            call <see cref="M:Friflo.Engine.ECS.EntitySchemaHolder.Set(Friflo.Engine.ECS.EntitySchema,Friflo.Engine.ECS.EntitySchemaSource)"/> with <paramref name="schemaSource"/>. It is invoked while the lock is held,
+            which is safe because <see cref="M:Friflo.Engine.ECS.EntitySchemaHolder.Set(Friflo.Engine.ECS.EntitySchema,Friflo.Engine.ECS.EntitySchemaSource)"/> re-enters the same lock.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.DescribeShape(Friflo.Engine.ECS.EntitySchema)">
+            <summary>
+            A description of what a schema is built from, comparable between a schema already created and a
+            <see cref="T:Friflo.Engine.ECS.NativeAOT"/> instance that has registered types but not created one.
+            <para>
+            It covers the registered .NET types plus the mod components, which have no .NET type and are compared
+            by struct index and size. It deliberately does NOT describe the finished component and tag tables:
+            those are only populated by <c>SchemaTypes.CreateSchemaTypes</c> during real creation, so producing
+            them for a candidate would mean building a second schema, and that mutates Friflo's process-global
+            type state. Registered types plus mod components is what can be compared without side effects, and it
+            is enough to catch a caller whose registrations differ from the sealed schema's.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.DescribeShape(System.Collections.Generic.IEnumerable{System.Type},System.Collections.Generic.List{Friflo.Engine.ECS.ComponentType})">
+            <inheritdoc cref="M:Friflo.Engine.ECS.EntitySchemaHolder.DescribeShape(Friflo.Engine.ECS.EntitySchema)"/>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.AlreadyCreated(Friflo.Engine.ECS.EntitySchemaSource)">
+            <summary>
+            The schema exists and something tried to create a second one. The two mechanisms are mutually
+            exclusive: a reflection scan builds its own set of schema types and ignores anything registered on a
+            <see cref="T:Friflo.Engine.ECS.NativeAOT"/> instance, so they cannot be combined or merged.
+            <para>
+            This takes <c>gate</c>, unlike the read path. It is an error path where the cost is irrelevant, and a
+            caller racing to create is precisely the case where an unsynchronized read of <c>source</c> could
+            name the wrong mechanism, or none, in the one message someone will use to work out what happened.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.EntitySchemaHolder.Unusable">
+            <summary>
+            The schema cannot be used right now. Either it was never created, or a usage window is closed. Those
+            are different mistakes with different fixes, so they get different messages.
+            </summary>
         </member>
         <member name="T:Friflo.Engine.ECS.EntityStore">
             <summary>
@@ -1859,6 +2015,187 @@
         <member name="F:Friflo.Engine.ECS.Index.IndexedValueUtils`2.GetIndexedValue">
             <summary> Returns the indexed component value without boxing. </summary>
         </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.CreateDefaultSchema">
+            <summary>
+            Dead: this was the silent fallback that built an engine-types-only schema when none had been
+            created, leaving every later component lookup pointing at the wrong table. The schema is now
+            created explicitly or not at all.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.CreateSchema">
+            <summary>
+            Creates the schema from the types registered on this instance.
+            Prefer <see cref="M:Friflo.Engine.ECS.SchemaBootstrap.InitializeFromRegisteredTypes(Friflo.Engine.ECS.NativeAOT)"/>: schema creation is routed through
+            <see cref="T:Friflo.Engine.ECS.SchemaBootstrap"/> so there is a single place that documents how and when it happens.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.DescribeRegisteredTypes">
+            <summary>
+            The shape of the types registered on this instance, for comparing a repeated initialization against
+            the schema already in place. Registers the engine types first, exactly as schema creation would, so
+            the description covers the same set a real creation would produce.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.RegisterEngineTypes">
+            <summary>
+            Adds the engine's own types, once per instance. Called by every registration entry point so they are
+            present however the instance is used.
+            <para>
+            Deliberately NOT guarded on "a schema already exists". Registering into an instance that will not
+            create the schema is harmless - it is a throwaway object - and it is what a process with more than one
+            container does. The guard that matters lives on creation instead: see CreateSchemaInternal,
+            EntitySchemaHolder.Initialize and EntitySchemaHolder.Set.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.RegisterComponent``1">
+            <summary>
+            Registers a component compiled into this build. Its managed type is its identity, so the schema keys it
+            by that type and its struct index falls out of <c>StructInfo&lt;T&gt;</c> once the schema is created.
+            See <see cref="M:Friflo.Engine.ECS.NativeAOT.RegisterModComponent(Friflo.Engine.ECS.ModComponentInfo,System.String)"/> for a component a mod defines, which has no managed type here.
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.NativeAOT.SchemaCreated">
+            <summary>
+            Whether the process-wide schema has been created. Reading this never creates it.
+            <para>
+            Deliberately NOT public: outside this assembly it only enables `if (!SchemaCreated) Create()`, which
+            is unsound across threads. Use <see cref="!:SchemaBootstrap.TryInitializeFromRegisteredTypes"/> or
+            <see cref="!:SchemaBootstrap.TryInitializeFromLoadedAssemblies"/> and read the result, or
+            <see cref="P:Friflo.Engine.ECS.SchemaBootstrap.SchemaSource"/> for diagnostics.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.NativeAOT.RegisterModComponent(Friflo.Engine.ECS.ModComponentInfo,System.String)">
+            <summary>
+            Registers a component defined by a mod, which has no managed type on this side.
+            </summary>
+            <param name="componentName">
+            The component's full type name. The sealed schema keys the component by it, so a caller that did not
+            create the schema can still resolve the struct index it actually got rather than assuming the one this
+            call returned.
+            </param>
+        </member>
+        <member name="T:Friflo.Engine.ECS.EntitySchemaSource">
+            <summary>
+            How the process-wide <see cref="T:Friflo.Engine.ECS.EntitySchema"/> was created. Exactly one mechanism creates it: they are
+            mutually exclusive, not combinable.
+            </summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.EntitySchemaSource.NotCreated">
+            <summary>No schema has been created yet. Creating an <see cref="T:Friflo.Engine.ECS.EntityStore"/> in this state throws.</summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.EntitySchemaSource.RegisteredTypes">
+            <summary>Created by <see cref="!:SchemaBootstrap.TryInitializeFromRegisteredTypes"/> from types
+            registered on a <see cref="T:Friflo.Engine.ECS.NativeAOT"/> instance.</summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.EntitySchemaSource.LoadedAssemblies">
+            <summary>Created by <see cref="!:SchemaBootstrap.TryInitializeFromLoadedAssemblies"/> by scanning the
+            assemblies that were loaded at the time.</summary>
+        </member>
+        <member name="T:Friflo.Engine.ECS.SchemaBootstrap">
+            <summary>
+            The entry point for creating the process-wide <see cref="T:Friflo.Engine.ECS.EntitySchema"/>. Every path goes through here,
+            so there is one place to look for how and when the schema comes into existence.
+            <para>
+            There are two mechanisms, both explicit, differing only in how component types are discovered:
+            <list type="bullet">
+              <item><see cref="!:TryInitializeFromRegisteredTypes"/> - every type registered by hand on a
+              <see cref="T:Friflo.Engine.ECS.NativeAOT"/> instance. Required when component types are not .NET types in this runtime,
+              for example server-side mod components that cross a runtime boundary as a stride plus function
+              pointers.</item>
+              <item><see cref="!:TryInitializeFromLoadedAssemblies"/> - component, tag and script types discovered by
+              scanning the assemblies currently loaded. Only sees what is loaded when it runs, so every mod
+              assembly must already be loaded.</item>
+            </list>
+            Exactly one of them creates the schema. Mixing them throws: a reflection scan cannot see types
+            registered explicitly, nor the other way round, so there is no meaningful way to combine them.
+            </para>
+            <para>
+            Initializing twice is a hard failure by default. A process that legitimately builds many containers over
+            one schema can opt out with <see cref="M:Friflo.Engine.ECS.SchemaBootstrap.AllowRepeatedInitializationForTests(System.Action{System.String})"/>, and even then the repeat
+            must produce a matching schema shape. Callers do not check first, and deliberately cannot: see the
+            synchronization contract in <c>EntitySchemaHolder</c> for why no "has it been created" flag is published.
+            </para>
+            <para>
+            Whichever you use, call it after all mods are loaded and before the first <see cref="T:Friflo.Engine.ECS.EntityStore"/>
+            exists. That ordering is the caller's responsibility and no amount of locking here can supply it.
+            </para>
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.SchemaBootstrap.SchemaSource">
+            <summary>
+            How the schema was created, or <see cref="F:Friflo.Engine.ECS.EntitySchemaSource.NotCreated"/> if it has not been.
+            For diagnostics and assertions. Do NOT branch on this to decide whether to initialize: call
+            <c>TryInitialize...</c> unconditionally and read its result instead.
+            </summary>
+        </member>
+        <member name="P:Friflo.Engine.ECS.SchemaBootstrap.RepeatedInitializationAllowed">
+            <summary>
+            Whether <see cref="M:Friflo.Engine.ECS.SchemaBootstrap.AllowRepeatedInitializationForTests(System.Action{System.String})"/> is in effect for this process. Whether a
+            repeated initialization throws depends on it, so a test asserting either behaviour should state which
+            mode it expects rather than assume the process it happens to run in.
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.AllowRepeatedInitializationForTests(System.Action{System.String})">
+            <summary>
+            Downgrades a repeated initialization through the same mechanism from a hard failure to a report on
+            <paramref name="onRepeat"/>. FOR TEST PROCESSES ONLY.
+            <para>
+            A test process legitimately builds many containers over one schema: the schema is process-global and
+            immutable, so every container after the first has nothing to create. Production has one container and
+            must keep the strict behaviour, because a second initialization there means something is registering
+            component types that are not in the sealed schema.
+            </para>
+            <para>
+            This does not make repeats unconditionally safe, and is not meant to. A repeat whose schema shape
+            differs from the one in place still fails: that caller's component types are not the ones in the
+            sealed schema, and letting it continue is exactly how struct indices come to mean different things to
+            different callers. Enabling this also requires somewhere to report to, so it cannot be turned on
+            silently.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.EnforceUsageWindowForTests">
+            <summary>Restores the default, where a repeated initialization is a hard failure.</summary>
+            <summary>
+            Makes the schema usable only inside an explicit window, for a test process. Off by default, so
+            production is unaffected and the schema is usable from the moment it is created.
+            <para>
+            With it on, a schema is created unusable and each test opens a window, uses it, and closes it. A
+            Friflo schema cannot really be rebuilt, so the window is the honest way to express per-test setup:
+            touching the schema outside one fails at the mistake rather than letting a test lean on what an
+            earlier one left behind.
+            </para>
+            </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.OpenUsageWindow">
+            <summary>Makes the schema usable. Fails if a window is already open, or none was ever created.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.CloseUsageWindow">
+            <summary>Makes the schema unusable again. Fails if no window is open.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.InitializeFromRegisteredTypes(Friflo.Engine.ECS.NativeAOT)">
+            <summary>
+            Creates the schema from the types registered on <paramref name="aot"/>, unless it already exists.
+            Register every component, tag, script, indexed component and mod component on it first: the schema is
+            immutable, so anything missing is missing for the lifetime of the process.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">A schema already exists and this call is not a permitted
+            repeat: it came from the other mechanism, repeats are not allowed, or the shapes differ.</exception>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaBootstrap.InitializeFromLoadedAssemblies">
+            <summary>
+            Creates the schema by scanning the assemblies currently loaded for <see cref="T:Friflo.Engine.ECS.IComponent"/>,
+            <see cref="T:Friflo.Engine.ECS.ITag"/> and <see cref="T:Friflo.Engine.ECS.Script"/> types, unless it already exists.
+            <para>
+            Call this only once every mod assembly is loaded. Types in assemblies loaded afterwards are absent
+            from the schema permanently, and using one then throws from <see cref="F:Friflo.Engine.ECS.StructInfo`1.Index"/>.
+            </para>
+            </summary>
+            <exception cref="T:System.InvalidOperationException">A schema already exists and this call is not a permitted
+            repeat: it came from the other mechanism, repeats are not allowed, or the shapes differ.</exception>
+        </member>
         <member name="T:Friflo.Engine.ECS.SchemaType">
             <summary>
             Provide meta data for <see cref="T:Friflo.Engine.ECS.Script"/> classes and <see cref="T:Friflo.Engine.ECS.IComponent"/> / <see cref="T:Friflo.Engine.ECS.ITag"/> structs. 
@@ -1917,6 +2254,16 @@
         </member>
         <member name="M:Friflo.Engine.ECS.SymbolColor.#ctor(System.Byte,System.Byte,System.Byte)">
             <summary> Create a <see cref="T:Friflo.Engine.ECS.SymbolColor"/> with the specified color components. </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaUtils.CreateSchemaByReflection">
+            <summary>Runs the reflection scan. Used only by <see cref="!:SchemaBootstrap.CreateFromLoadedAssemblies"/>.</summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.SchemaUtils.RegisterSchemaTypes">
+            <summary>
+            Dead: implicit schema creation was removed. The schema is created explicitly through
+            <see cref="M:Friflo.Engine.ECS.NativeAOT.CreateSchema"/> or <see cref="!:SchemaBootstrap.CreateFromLoadedAssemblies"/>,
+            and read through <see cref="T:Friflo.Engine.ECS.EntitySchemaHolder"/>.
+            </summary>
         </member>
         <member name="M:Friflo.Engine.ECS.SchemaUtils.CreateTagType``1(System.Int32)">
             <remarks>
@@ -2057,19 +2404,29 @@
             </summary>
             <remarks> Executes in O(1). Simply an array index lookup. </remarks>
         </member>
-        <member name="F:Friflo.Engine.ECS.ModComponentRegistration.Stride">
+        <member name="F:Friflo.Engine.ECS.ModComponentInfo.Stride">
             <summary><c>Unsafe.SizeOf&lt;T&gt;()</c> - informs the AOT side of component stride.</summary>
         </member>
-        <member name="F:Friflo.Engine.ECS.ModComponentRegistration.IsBlittable">
+        <member name="F:Friflo.Engine.ECS.ModComponentInfo.IsBlittable">
             <summary>1 if T is blittable and raw pointer iteration is available, 0 otherwise.</summary>
         </member>
-        <member name="F:Friflo.Engine.ECS.ModComponentRegistration.ChangedFromApi">
+        <member name="F:Friflo.Engine.ECS.ModComponentInfo.ChangedFromApi">
             <summary>Function pointer: 1 if the component was changed from the API (server override).</summary>
+        </member>
+        <member name="F:Friflo.Engine.ECS.ModComponentInfo.Delivery">
+            How the component's changes travel: 0 reliable, 1 unreliable. Mirrors <c>ReadyM.SDK.Attributes.Delivery</c>.
         </member>
         <member name="T:Friflo.Engine.ECS.AllocHeapDelegate">
             <summary>
-            Delegate matching the AllocHeap function pointer in ModComponentRegistration.
+            Delegate matching the AllocHeap function pointer in ModComponentInfo.
             </summary>
+        </member>
+        <member name="M:Friflo.Engine.ECS.ModComponentType.#ctor(System.Int32,Friflo.Engine.ECS.ModComponentInfo,System.String)">
+            <param name="componentName">
+            The mod component's full type name. It is the schema's key for this component, which is how a caller
+            that did not create the schema finds its struct index: keying by the struct index, as this used to,
+            makes the key the answer to the only question worth asking it.
+            </param>
         </member>
         <member name="T:Friflo.Engine.ECS.ScriptType">
             <summary>
@@ -3178,6 +3535,13 @@
             <summary>Return the component of the given type as a reference.</summary>
             <exception cref="T:System.NullReferenceException"> if entity has no component of Type <typeparamref name="T"/></exception>
             <remarks>Executes in O(1)</remarks>
+        </member>
+        <member name="M:Friflo.Engine.ECS.Entity.TryGetModComponentSlot(System.Int32,System.IntPtr@,System.Int32@)">
+            <summary>
+            ReadyM fork addition. Names a mod component slot as heap plus index instead of an address,
+            so the embedded runtime that owns the array is the only side that dereferences it.
+            </summary>
+            <returns>false when the entity is dead or the component is not a mod component.</returns>
         </member>
         <member name="M:Friflo.Engine.ECS.Entity.TryGetComponent``1(``0@)">
             <remarks>Executes in O(1)</remarks>

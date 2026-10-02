@@ -27,17 +27,23 @@
         <member name="M:OblivionMp.Sdk.Api.IMarkerApi.SetMarkerOpacity(OblivionMp.Sdk.Values.MarkerHandle,System.Single)">
             <summary> Sets a marker's opacity, from 0 (fully transparent) to 1 (fully opaque). No-op for <see cref="P:OblivionMp.Sdk.Values.MarkerHandle.None"/>.</summary>
         </member>
-        <member name="T:OblivionMp.Sdk.Api.IOblivionChatApi">
+        <member name="P:OblivionMp.Sdk.Api.IOblivionEntityApi.AreaPlayers">
             <summary>
-            API for interacting with the in-game chat.
+            Players in the local player's current area including the local player.
             </summary>
         </member>
-        <member name="M:OblivionMp.Sdk.Api.IOblivionChatApi.ShowLocalMessage(System.String,OblivionMpCSharpMod.Values.Color)">
+        <member name="P:OblivionMp.Sdk.Api.IOblivionEntityApi.AllDroppedItems">
             <summary>
-            Adds a message to the in-game chat, visible only to the local player.
+            Gets all dropped items in the game world.
             </summary>
-            <param name="message">The message to add to the chat.</param>
-            <param name="color">The color of the message in the chat.</param>
+        </member>
+        <member name="M:OblivionMp.Sdk.Api.IOblivionEntityApi.SpawnDroppedItem(ReadyM.Relay.Common.Oblivion.FormId,System.Int32,System.Numerics.Vector3)">
+            <summary>
+            Spawns a dropped item in the game world at the specified position.
+            </summary>
+            <param name="item">The item FormId.</param>
+            <param name="stackSize">The number of items in the stack.</param>
+            <param name="position">The position in the game world where the item should be spawned.</param>
         </member>
         <member name="T:OblivionMp.Sdk.Api.IOblivionGameMessageApi">
             <summary>
@@ -89,22 +95,44 @@
             Gets all dropped items in the game world.
             </summary>
         </member>
-        <!-- Badly formed XML comment ignored for member "M:OblivionMp.Sdk.Api.IOblivionSyncApi.SpawnDroppedItem(ReadyM.Relay.Common.Oblivion.FormId,System.Int32,System.Numerics.Vector3)" -->
+        <member name="M:OblivionMp.Sdk.Api.IOblivionSyncApi.SpawnDroppedItem(ReadyM.Relay.Common.Oblivion.FormId,System.Int32,System.Numerics.Vector3)">
+            <summary>
+            Spawns a dropped item in the game world at the specified position.
+            </summary>
+            <param name="item">The item FormId.</param>
+            <param name="stackSize">The number of items in the stack.</param>
+            <param name="position">The position in the game world where the item should be spawned.</param>
+        </member>
         <member name="T:OblivionMp.Sdk.Api.MarkerApi">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
         </member>
         <member name="M:OblivionMp.Sdk.Api.MarkerApi.#ctor(OblivionMpCSharpMod.NativeMarkerControl)">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
         </member>
-        <member name="T:OblivionMp.Sdk.CustomPotion">
-            <summary>
-            Properties of a custom potion item.
-            </summary>
+        <member name="T:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityView">
+            Walks this shape by chunk. Valid only inside the loop that produced it.
         </member>
-        <member name="T:OblivionMp.Sdk.CustomSpell">
-            <summary>
-            Properties of a custom spell.
-            </summary>
+        <member name="P:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityView.Handle">
+            The way out to anything a chunk view cannot do, such as a structural change after the loop.
+        </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.get_Hidden(OblivionMp.Sdk.Common.Archetypes.MainCharacter@)">
+            <inheritdoc cref="P:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.Hidden"/>
+        </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.set_Hidden(OblivionMp.Sdk.Common.Archetypes.MainCharacter@,System.Single)">
+            <inheritdoc cref="P:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.Hidden"/>
+        </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.SetHidden(OblivionMp.Sdk.Common.Archetypes.MainCharacter@,System.Single)">
+            <inheritdoc cref="M:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.SetHidden(System.Single)"/>
+        </member>
+        <member name="P:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.Hidden">
+            <remarks>
+            Inside a query call <c>SetHidden</c> instead.
+            </remarks>
+        </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityOnMainCharacter.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.SetHidden(System.Single)">
+            <remarks>
+            Use inside queries instead of the property setter.
+            </remarks>
         </member>
         <member name="T:OblivionMp.Sdk.Entities.DroppedItem.ReadyDroppedItem">
             <summary>
@@ -257,7 +285,7 @@
         <member name="M:OblivionMp.Sdk.Entities.Player.ReadyMainCharacter.AddItemToInventory(ReadyM.Relay.Common.Oblivion.FormId,System.Int32)">
             <summary>
             Add the specified item to the inventory.
-            Check <see cref="T:ReadyM.Relay.Common.Oblivion.Data.Items"/> for item list.
+            Check <see cref="!:ReadyM.Relay.Common.Oblivion.Data.Items"/> for item list.
             </summary>
             <param name="itemId">The <see cref="T:ReadyM.Relay.Common.Oblivion.FormId"/> of the item to add.</param>
             <param name="quantity">Number of items to add.</param>
@@ -265,7 +293,7 @@
         <member name="M:OblivionMp.Sdk.Entities.Player.ReadyMainCharacter.RemoveItemFromInventory(ReadyM.Relay.Common.Oblivion.FormId,System.Int32)">
             <summary>
             Remove an item from the player's inventory.
-            Check <see cref="T:ReadyM.Relay.Common.Oblivion.Data.Items"/> for item list.
+            Check <see cref="!:ReadyM.Relay.Common.Oblivion.Data.Items"/> for item list.
             If the quantity to remove is greater than the current quantity, the item will be completely removed from the inventory.
             </summary>
             <param name="itemId">FormId of the item to remove.</param>
@@ -364,10 +392,9 @@
             Does not impact MaxFatigue value.
             </summary>
         </member>
-        <member name="T:OblivionMp.Sdk.MagicEffect">
-            <summary>
-            Properties of a magic effect that is part of a custom spell or potion.
-            </summary>
+        <member name="P:OblivionMp.Sdk.Mod.ModDirectory">
+            This mod's own folder, which holds its assemblies, manifest and any files it ships.
+            <remarks>Pushed in after the constructor runs, so it reads as empty in one.</remarks>
         </member>
         <member name="T:OblivionMp.Sdk.SDK">
             <summary>
@@ -386,12 +413,35 @@
         <member name="P:OblivionMp.Sdk.SDK.Markers">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
         </member>
-        <member name="P:OblivionMp.Sdk.SDK.Chat">
-            <inheritdoc cref="T:OblivionMp.Sdk.Api.IOblivionChatApi"/>
-        </member>
         <member name="P:OblivionMp.Sdk.SDK.GameMessage">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IOblivionGameMessageApi"/>
         </member>
+        <member name="P:OblivionMp.Sdk.SDK.Cef">
+            <summary>
+            Browsers, the viewports they are shown in, and what the <c>readym://</c> scheme serves.
+            </summary>
+            <remarks>
+            The layer BELOW the web UI SDK rather than that SDK itself, which is why it is blunt: a nicer surface
+            <para>
+            Usable in a session with no CEF installed. Browsers come back as stand-ins and the engine says once why,
+            so a mod needs no guard for a deployment it cannot control.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:OblivionMp.Sdk.SDK.CefMessages">
+            <summary>
+            Sending named messages to a page.
+            </summary>
+            <remarks>
+            SEPARATE FROM <see cref="P:OblivionMp.Sdk.SDK.Cef"/> because it is a different job: that one knows browsers, viewports and
+            lifetimes, and this one knows what a message is called. Receiving is <see cref="P:OblivionMp.Sdk.SDK.CefMessageCallbacks"/>,
+            because keeping a name and sending under one are not the same thing either.
+            </remarks>
+        </member>
+        <member name="P:OblivionMp.Sdk.SDK.CefMessageCallbacks">
+            <summary>Which callback a message name belongs to. Registering one is how a mod receives.</summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:OblivionMp.Sdk.SDK.Archetypes" -->
         <member name="P:OblivionMp.Sdk.SDK.Archetypes.GlobalPlayerArchetype">
             <summary>s
             Gets the archetype ID of main character entities. Useful for assigning components which need to be persistent across different areas.

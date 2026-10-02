@@ -76,6 +76,40 @@
         <member name="T:ReadyM.Api.ECS.Managers.IEntityDeleteImpl">
             <exclude />
         </member>
+        <member name="M:ReadyM.Api.ECS.Registry.ComponentRegistryBase`2.RegisterComponentImpl``1(``0)">
+            <summary>
+            Collects a component compiled into this build. Records a deferred action and does no work itself, so
+            what an acceptor sees is decided by when the acceptor runs, not by when the registration happened.
+            <see cref="M:ReadyM.Api.ECS.Registry.ComponentRegistryBase`2.RegisterModComponentImpl(Friflo.Engine.ECS.ModComponentInfo,System.String)"/> is the mod-defined counterpart.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.ECS.Registry.ComponentRegistryBase`2.RegisterModComponentImpl(Friflo.Engine.ECS.ModComponentInfo,System.String)">
+            <summary>
+            Collects a mod-defined component. Mirrors <see cref="M:ReadyM.Api.ECS.Registry.ComponentRegistryBase`2.RegisterComponentImpl``1(``0)"/> exactly: it records a
+            deferred action and does no work, so a mod component reaches every acceptor at the same point in the
+            build as a native one rather than being acted on the moment it arrives.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.ECS.Registry.IComponentRegistryCallbackBase`2.AcceptComponent``1(`0,``0)">
+            <summary>
+            A component compiled into this build. Its managed type is its identity, so <typeparamref name="T"/>
+            carries everything an acceptor needs and the registered default value travels with it.
+            <para>
+            Every acceptor implements this one. A registry that carries components at all carries native ones.
+            </para>
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.ECS.Registry.IComponentRegistryCallbackBase`2.AcceptModComponent(`0,Friflo.Engine.ECS.ModComponentInfo,System.String)">
+            <summary>
+            A component defined by a mod. It has no managed type on this side, so it arrives as a stride plus a
+            set of function pointers, identified by its full type name.
+            <para>
+            Deliberately has no default implementation. Whether a registry can carry mod components is a decision
+            per registry, and a default would let a new one inherit an answer nobody chose. A registry that cannot
+            should throw <see cref="T:System.NotSupportedException"/> and say why.
+            </para>
+            </summary>
+        </member>
         <member name="T:ReadyM.Api.ECS.Worlds.ArchetypeBuilder">
             <summary>
             Builder class for creating archetypes in the ECS (Entity Component System) framework.
@@ -124,16 +158,25 @@
             builder. It is NOT invoked on each call</param>
         </member>
         <member name="F:ReadyM.Api.ECS.Worlds.Store._modPostCreateInit">
-            <summary>
             Runs native init for components the mod host owns. Those are registered here as opaque stride components, so
             <see cref="T:ReadyM.Api.ECS.Worlds.Store.NativeInitCallback"/> cannot see them and the mod side has to do it. Null when no mod host is
             attached, which is always the case on the client.
-            </summary>
         </member>
-        <member name="M:ReadyM.Api.ECS.Worlds.Store.SetModPostCreateInit(System.Action{ReadyM.Api.Idents.ArchetypeId,System.Int32})">
+        <member name="F:ReadyM.Api.ECS.Worlds.Store._modEntityDeletedCallback">
+            Tells the mod host an entity is about to be deleted, so that [DeleteHandler]s can run. Null on the client.
+        </member>
+        <member name="M:ReadyM.Api.ECS.Worlds.Store.SetModPostCreateInit(System.Action{ReadyM.Api.Idents.ArchetypeId,Friflo.Engine.ECS.RawEntity,System.Boolean})">
             <summary>
             Registers the mod host's native init hook. Called once during mod host initialisation.
             </summary>
+        </member>
+        <member name="M:ReadyM.Api.ECS.Worlds.Store.SetModEntityDeletedCallback(System.Action{Friflo.Engine.ECS.RawEntity})">
+            <summary>
+            Registers the mod host's delete hook. Called once during mod host initialisation.
+            </summary>
+        </member>
+        <member name="M:ReadyM.Api.ECS.Worlds.Store.CreateEntity(ReadyM.Api.Idents.ArchetypeId,System.Action{ReadyM.Api.ECS.Worlds.EntityBuilder},System.Boolean)">
+            <param name="local">False for an entity that was created elsewhere and is arriving here.</param>
         </member>
         <member name="M:ReadyM.Api.ECS.Worlds.Store.ComponentIndex``2">
             <summary>
@@ -458,12 +501,6 @@
             Marks a component only the server is allowed to modify.
             </summary>
         </member>
-        <member name="T:ReadyM.Api.Mapping.Tags.IWorldAuthoritative">
-            <summary>
-            Marks a component the server authors on the world entity and projects onto every client, which applies
-            it to the game. The world entity has no client owner, so it is not gated on ownership.
-            </summary>
-        </member>
         <member name="T:ReadyM.Api.Saves.FileInfo">
             <summary>
             Represents a file with a name and binary content, used for saving game data.
@@ -512,9 +549,6 @@
             <summary>
             Defines how a struct should be serialized when using <see cref="!:DeriveINetSerializableAttribute"/>.
             </summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
-            <exclude/>
         </member>
     </members>
 </doc>

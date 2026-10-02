@@ -13,6 +13,10 @@
         <Reference Include="..\Dependencies\Server\OblivionMp.Sdk.Serverside.dll">
             <Private>false</Private>
         </Reference>
+        <!-- The Oblivion half the client shares, which the server SDK builds on. -->
+        <Reference Include="..\Dependencies\Server\OblivionMp.Sdk.Common.dll">
+            <Private>false</Private>
+        </Reference>
         <Reference Include="..\Dependencies\Server\ReadyM.Relay.Server.Sdk.dll">
             <Private>false</Private>
         </Reference>
@@ -20,6 +24,18 @@
             <Private>false</Private>
         </Reference>
         <Reference Include="..\Dependencies\Server\ReadyM.Api.Multiplayer.dll">
+            <Private>false</Private>
+        </Reference>
+        <!-- The SDK attributes: [ModEntry], [Service], [RpcHandlersFor] and the rest. -->
+        <Reference Include="..\Dependencies\Server\ReadyM.SDK.dll">
+            <Private>false</Private>
+        </Reference>
+        <!-- What those attributes generate against on the server: entities, services, the container. -->
+        <Reference Include="..\Dependencies\Server\ReadyM.SDK.Server.dll">
+            <Private>false</Private>
+        </Reference>
+        <!-- Chunk views, which a generated query hands to its callback. -->
+        <Reference Include="..\Dependencies\Server\ReadyM.SDK.Chunks.dll">
             <Private>false</Private>
         </Reference>
         <!-- Oblivion-specific components and values, e.g. VitalsComponent and ParentCellKind. -->

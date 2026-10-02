@@ -1,45 +1,20 @@
+using ArenaMod.Server.ArenaPlugin;
 using Microsoft.Extensions.Logging;
-using ArenaMod.Common;
-using ArenaMod.Server.RArenaPlugin;
-using OblivionMp.Sdk.Serverside;
-using ReadyM.Api.ECS.Worlds;
-using ReadyM.Relay.Server.Sdk;
-using ReadyM.Relay.Server.Sdk.Ecs.Components;
+using ReadyM.Api.DI;
+using ReadyM.SDK.Attributes;
 
 namespace ArenaMod.Server;
 
 // The server mod's entry point. The plugin host instantiates the single ServerModBase-derived class.
-public class Mod : ServerModBase
+[ModEntry]
+public sealed partial class Mod(IDependencyContainer services, ILogger logger)
 {
-    public static RArena rArena;
-    internal static RArenaSaveFileDispatcherSystem dispatcherSystem;
-
-
-    protected override void Init()
+    private void Start()
     {
-        //Services.RegisterSingleton<ServerRpc>();
-        //Services.RegisterSingleton<ModSystemBase, PassiveActivityIncomeSystem>();
+        services.RegisterSingleton<Arena>();
+        services.RegisterSingleton<ArenaAreaEventHandlers>();
 
-        Services.RegisterSingleton<RArena>();
-        Services.RegisterSingleton<RArenaServerRpc>();
-        Services.RegisterSystem<RArenaSystem>();
-        Services.RegisterSystem<RArenaSaveFileDispatcherSystem>();
-        Services.RegisterSingleton<RArenaAreaEventHandlers>();
-        rArena = Services.Resolve<RArena>();
-
-        var registry = Services.Resolve<IArchetypeRegistry>();
-        var archetypes = Services.Resolve<OblivionArchetypes>();
-
-
-        registry.ModifyArchetype(archetypes.GlobalPlayerArchetype, archetype =>
-        {
-            //archetype.Add<WalletComponent>();
-        });
-
-        var logger = Services.Resolve<ILogger>();
-        RArenaSaveFileDispatcher.logger = logger;
+        ArenaSaveFileDispatcher.Logger = logger; // TODO: What?
         logger.LogInformation("Arena server mod initialized");
     }
 }
-
-

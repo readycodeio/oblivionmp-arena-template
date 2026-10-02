@@ -1,12 +1,13 @@
 using ReadyM.Api.Idents;
 using ReadyM.Api.Multiplayer;
+using ReadyM.SDK.Attributes;
 
 namespace ArenaMod.Common;
 
 // Server-RPC contracts shared by both mods. [ClientToServer] generates a Send on the client and a
 // handler on the server; [ServerToClient] the reverse. Same name, opposite directions = request/response.
-[ServerRpcContracts]
-public static partial class RpcContracts
+[RpcContracts]
+public static partial class ArenaRpcContracts
 {
     [ServerToClient] public static partial void AnnounceWinner(PlayerId winner);
     [ServerToClient] public static partial void AnnounceWinnerTeam(byte team);

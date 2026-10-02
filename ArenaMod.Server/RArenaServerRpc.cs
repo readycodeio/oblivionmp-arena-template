@@ -1,44 +1,38 @@
 using ArenaMod.Common;
-using ReadyM.Api.Multiplayer;
-using ReadyM.Relay.Common.Oblivion.ECS.Components;
-using ReadyM.Relay.Server.Sdk.Ecs;
+using OblivionMp.Sdk.Common.Archetypes;
 using ReadyM.Relay.Server.Sdk.Rpc;
+using ReadyM.SDK.Attributes;
+using ReadyM.SDK.Server.Entities;
 
 namespace ArenaMod.Server;
 
 // Server side of the server-RPC contracts. Implement the [ClientToServer] handlers; the
 // [ServerToClient] Send methods are generated. Each handler gets an RpcContext with the sender.
 // Register in Mod.Init.
-[ServerRpcFor(typeof(RpcContracts))]
-public partial class RArenaServerRpc(EcsApi ecsApi) : ServerRpcHandlersBase
+[RpcHandlersFor(typeof(ArenaRpcContracts))]
+public sealed partial class RArenaServerRpc(IEntities entities)
 {
     partial void OnDemandHeal(RpcContext context)
     {
-        ecsApi.Query<MainCharacterComponent, VitalsComponent>((ref main, ref vital) => 
-        { 
-            if (main.PlayerId == context.Sender)
-            {
-                vital.Hp = 9999;
-            }
-        });
+        if (entities.TryLookup(context.Sender, out MainCharacter main))
+        {
+            main.Hp = main.HpBase; // TODO: Check, was 9999
+        }
     }
 
     partial void OnDemandHealAllPlayers(RpcContext context)
     {
-        ecsApi.Query<VitalsComponent>((ref vital) => 
+        foreach (var main in entities.Query<MainCharacter>())
         {
-            vital.Hp = 9999;
-        });
+            main.Hp = main.HpBase; // TODO: Check, was 9999
+        }
     }
 
     partial void OnDemandPositionChange(RpcContext context)
     {
-        ecsApi.QueryWithEntity<MainCharacterComponent, TransformComponent>((ref main, ref t, id) => { 
-            if (main.PlayerId == context.Sender)
-            {
-                t.Position = RArenaCommon.Data.ArenaSpectatorStand;
-                t.PositionNotifyChanged(id);
-            }
-        });
+        if (entities.TryLookup(context.Sender, out MainCharacter main))
+        {
+            main.Position = RArenaCommon.Data.ArenaSpectatorStand;
+        }
     }
 }

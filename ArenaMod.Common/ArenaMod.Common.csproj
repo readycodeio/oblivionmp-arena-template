@@ -16,6 +16,19 @@
         <Reference Include="..\Dependencies\Client\ReadyM.Api.Multiplayer.dll">
             <Private>false</Private>
         </Reference>
+        <!-- The SDK attributes: [RpcContracts], [Archetype], [Mixin] and the rest. Every project
+             that carries one needs this, because the generator writes its registrations against it. -->
+        <Reference Include="..\Dependencies\Client\ReadyM.SDK.dll">
+            <Private>false</Private>
+        </Reference>
+        <!-- Oblivion archetypes and shapes shared by both halves, e.g. Player and Actor. -->
+        <Reference Include="..\Dependencies\Client\OblivionMp.Sdk.Common.dll">
+            <Private>false</Private>
+        </Reference>
+        <!-- Oblivion-specific values shared with the server. -->
+        <Reference Include="..\Dependencies\Client\ReadyM.Relay.Common.Oblivion.dll">
+            <Private>false</Private>
+        </Reference>
         <Reference Include="..\Dependencies\Client\Friflo.Engine.ECS.dll">
             <Private>false</Private>
         </Reference>

@@ -1,44 +1,41 @@
-﻿using ReadyM.Modloader.Mods;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using ReadyM.SDK.Attributes;
 
-namespace ArenaMod.Client
+namespace ArenaMod.Client;
+
+[Service]
+public sealed partial class RArenaTimerCountdown
 {
-    public class RArenaTimerCountdown : ModSystemBase
+    private float _elapsed;
+    public bool _running = false;
+
+    private void Update()
     {
-        private float _elapsed = 0f;
-        public bool _running = false;
-
-        protected override void OnUpdate(UpdateTick tick)
+        //RArenaUtils.DisplayArenaInfo();
+        if (!_running)
         {
-            //RArenaUtils.DisplayArenaInfo();
-            if (!_running)
+            if (_elapsed > 0f)
             {
-                if (_elapsed > 0f)
-                {
-                    _elapsed = 0f;
-                }
-                return;
+                _elapsed = 0f;
             }
 
-            if (RArenaClient.RArenaParticipantReadyCount >= (RArenaClient.RArenaParticipantCount / 2))
-            {
-                _elapsed += tick.deltaTime;
-            }
+            return;
         }
 
-        public double GetRemainingTime()
+        if (RArenaClient.RArenaParticipantReadyCount >= (RArenaClient.RArenaParticipantCount / 2))
         {
-            double remainingTime = 30.0 - _elapsed;
-            if (remainingTime > 0f)
-            {
-                return Math.Round(remainingTime, 2);
-            }
-            else
-            {
-                return 0;
-            }
+            _elapsed += Time.DeltaTime;
         }
+    }
+
+    public double GetRemainingTime()
+    {
+        var remainingTime = 30.0 - _elapsed;
+
+        if (remainingTime > 0f)
+        {
+            return Math.Round(remainingTime, 2);
+        }
+
+        return 0;
     }
 }

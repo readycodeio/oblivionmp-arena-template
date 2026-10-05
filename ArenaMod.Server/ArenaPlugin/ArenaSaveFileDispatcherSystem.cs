@@ -5,7 +5,11 @@ using ReadyM.SDK.Attributes;
 namespace ArenaMod.Server.ArenaPlugin;
 
 [Service]
-internal sealed partial class ArenaSaveFileDispatcherSystem(PlayerApi playerApi, ILogger logger)
+internal sealed partial class ArenaSaveFileDispatcherSystem(
+    ArenaSaveFileDispatcher dispatcher,
+    PlayerApi playerApi,
+    ILogger logger
+)
 {
     private void Start()
     {
@@ -16,11 +20,11 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(PlayerApi playerApi,
         logger.LogInformation("Registered handler {name}", nameof(OnPlayerDisconnectedHandler));
         playerApi.OnPlayerDisconnected += OnPlayerDisconnectedHandler;
 
-        ArenaSaveFileDispatcher.InitializeLoadouts();
+        dispatcher.InitializeLoadouts();
         logger.LogInformation("Arena plugin init completed");
 
-        if (!Directory.Exists(ArenaSaveFileDispatcher.SavesPlayersDir))
-            Directory.CreateDirectory(ArenaSaveFileDispatcher.SavesPlayersDir);
+        if (!Directory.Exists(dispatcher.SavesPlayersDir))
+            Directory.CreateDirectory(dispatcher.SavesPlayersDir);
     }
 
     private void Stop()
@@ -31,21 +35,23 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(PlayerApi playerApi,
 
     private void OnPlayerConnectedHandler(PlayerConnectedEvent obj)
     {
-        Guid rawPlayerGuid = obj.ReadyMId;
-        string playerGuid = rawPlayerGuid.ToString().Replace("-", "");
-        string templatePath = ArenaSaveFileDispatcher.GetRandomLoadout();
+        var rawPlayerGuid = obj.ReadyMId;
+        var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
+        var templatePath = dispatcher.GetRandomLoadout();
 
         if (!string.IsNullOrEmpty(templatePath))
         {
-            string playerFile = Path.Combine(ArenaSaveFileDispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");
-            string shortLoadoutName = templatePath.Split('\\').Last();
-
+            var playerFile = Path.Combine(dispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");
+            var shortLoadoutName = templatePath.Split('\\').Last();
+            
+            Directory.CreateDirectory(dispatcher.SavesPlayersDir);
             File.Copy(templatePath, playerFile, overwrite: true);
             logger.LogInformation("Prepared loadout {loadout} for player {guid}", shortLoadoutName, playerGuid);
 
-            ArenaSaveFileDispatcher.PlayerLoadouts[rawPlayerGuid] = templatePath;
+            dispatcher.PlayerLoadouts[rawPlayerGuid] = templatePath;
 
-            if (ArenaSaveFileDispatcher.PlayerLoadouts.Count > 1) PrintUsers();
+            if (dispatcher.PlayerLoadouts.Count > 1) 
+                PrintUsers();
         }
         else
         {
@@ -55,13 +61,12 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(PlayerApi playerApi,
 
     private void OnPlayerDisconnectedHandler(PlayerDisconnectedEvent obj)
     {
-        Guid rawPlayerGuid = obj.ReadyMId;
-        string playerGuid = rawPlayerGuid.ToString().Replace("-", "");
+        var rawPlayerGuid = obj.ReadyMId;
+        var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
 
+        dispatcher.ReleaseLoadout(rawPlayerGuid);
 
-        ArenaSaveFileDispatcher.ReleaseLoadout(rawPlayerGuid);
-
-        string playerFile = Path.Combine(ArenaSaveFileDispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");
+        var playerFile = Path.Combine(dispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");
         if (File.Exists(playerFile))
         {
             File.Delete(playerFile);
@@ -73,10 +78,10 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(PlayerApi playerApi,
 
     private void PrintUsers()
     {
-        if (ArenaSaveFileDispatcher.PlayerLoadouts.Count == 0) return;
+        if (dispatcher.PlayerLoadouts.Count == 0) return;
 
         logger.LogInformation("Taken loadouts:");
-        foreach (var kvp in ArenaSaveFileDispatcher.PlayerLoadouts)
+        foreach (var kvp in dispatcher.PlayerLoadouts)
         {
             logger.LogInformation($"\t- Player: {kvp.Key} -> Loadout: {Path.GetFileName(kvp.Value)}");
         }

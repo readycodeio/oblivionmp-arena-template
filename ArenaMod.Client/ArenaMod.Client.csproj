@@ -53,6 +53,9 @@
         <Reference Include="..\Dependencies\Client\Friflo.Engine.ECS.dll">
             <Private>false</Private>
         </Reference>
+        <Reference Include="..\Dependencies\Client\Yooni.Native.Container.dll">
+            <Private>false</Private>
+        </Reference>
         <Analyzer Include="..\Dependencies\Client\ReadyM.Api.Generators.dll" />
     </ItemGroup>
 

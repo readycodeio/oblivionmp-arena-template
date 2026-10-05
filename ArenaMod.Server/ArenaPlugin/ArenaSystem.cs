@@ -2,11 +2,11 @@
 using ArenaMod.Server.ArenaPlugin.Enums;
 using ArenaMod.Server.Conditions;
 using Microsoft.Extensions.Logging;
+using OblivionMp.Sdk.Common.Archetypes;
 using ReadyM.Api.Idents;
-using ReadyM.Relay.Common.Oblivion.ECS.Components;
 using ReadyM.Relay.Common.Oblivion.ECS.Values;
-using ReadyM.Relay.Server.Sdk.Ecs;
 using ReadyM.SDK.Attributes;
+using ReadyM.SDK.Server.Entities;
 
 namespace ArenaMod.Server.ArenaPlugin;
 
@@ -20,7 +20,13 @@ namespace ArenaMod.Server.ArenaPlugin;
 //      Arrows and magic scrolls can be refilled using SDK.AddItemToInventory
 //      May need to force the player to reload the game, possibly having different character upon connecting
 [Service]
-internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServerRpc sRpc, ILogger logger)
+internal sealed partial class ArenaSystem(
+    Arena arena,
+    IEntities entities,
+    ArenaUtils arenaUtils,
+    RpcHandlers rpc,
+    ILogger logger
+)
 {
     private float _arenaSystemsElapsed;
     private const float ArenaSystemsInterval = 0.3f;
@@ -66,19 +72,15 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
 
     private void Start()
     {
-        ArenaUtils.Arena = arena;
-        ArenaUtils.EcsApi = ecsApi;
-        ArenaUtils.SRpc = sRpc;
-
-        arena.ArenaWinningConditions.Add(new ArenaLmsCondition(arena, priority: 10));
-        arena.ArenaWinningConditions.Add(new ArenaPlayerLossCondition(arena, ecsApi, sRpc, priority: 1, arenaHpLossCondition: ArenaLossCondition.PlayerHpBelowLimit));
+        arena.ArenaWinningConditions.Add(new LastManStandingCondition(arena, priority: 10));
+        arena.ArenaWinningConditions.Add(new PlayerLossCondition(arena, entities, rpc, priority: 1, arenaHpLossCondition: ArenaLossCondition.PlayerHpBelowLimit));
 
         ArenaTimerCountdown.InitializeTimerStamps(30,
             onCountdown: (d) =>
             {
                 foreach (var p in arena.Participants.Keys)
                 {
-                    sRpc.SendArenaCountdown(p, (int)d);
+                    rpc.SendArenaCountdown(p, (int)d);
                 }
             }
         );
@@ -127,14 +129,13 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
         {
             if (arena.PlayersImmortal)
             {
-                ecsApi.QueryWithEntity<MainCharacterComponent, VitalsComponent>((ref main, ref vital, id) =>
+                foreach (var main in entities.Query<MainCharacter>())
                 {
                     if (arena.Participants.ContainsKey(main.PlayerId))
                     {
-                        //logger.LogError("Vital modified, arena status: {status}", rArena.ArenaStatus.ToString());
-                        ArenaUtils.Heal(id, ref vital);
+                        ArenaUtils.Heal(main);
                     }
-                });
+                }
             }
 
             CheckStartingCondition();
@@ -154,52 +155,49 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
     {
         switch (c)
         {
-            case ArenaLmsCondition lastManStanding:
+            case LastManStandingCondition lastManStanding:
                 logger.LogInformation("{Name} has won!", lastManStanding.Winner);
                 arena.ArenaStatus = ArenaStatus.Finished;
                 arena.Participants.Clear();
                 arena.ParticipantsStatusTimeouts.Clear();
 
-                ecsApi.Query<MainCharacterComponent>((ref main) =>
+                foreach (var main in entities.Query<MainCharacter>())
                 {
-                    //sRpc.SendAnnounceFightEnded(main.PlayerId);
-                    sRpc.SendAnnounceWinner(main.PlayerId, lastManStanding.Winner);
-                });
+                    rpc.SendAnnounceWinner(main.PlayerId, lastManStanding.Winner);
+                }
 
                 foreach (var condition in arena.ArenaWinningConditions)
                 {
                     condition.Reset();
                 }
 
-                Reset();
-                break;
-            default:
-                Reset();
                 break;
         }
+
+        Reset();
     }
 
     private void CheckStartingCondition()
     {
         if (arena.Participants.Count > 1)
         {
-            ecsApi.Query<MainCharacterComponent, ParentCellComponent>((ref player, ref cell) =>
+            foreach (var main in entities.Query<MainCharacter>())
             {
-                if (arena.Participants.ContainsKey(player.PlayerId))
+                if (arena.Participants.ContainsKey(main.PlayerId))
                 {
-                    if (arena.Participants[player.PlayerId] == ArenaParticipantStatus.NotReady) return;
-                    if (cell.Kind != ParentCellKind.Interior)
+                    if (arena.Participants[main.PlayerId] == ArenaParticipantStatus.NotReady) return;
+                    if (main.ParentCellKind != ParentCellKind.Interior)
                     {
-                        logger.LogInformation("Setting {player} as not ready", player.PlayerId);
-                        arena.Participants[player.PlayerId] = ArenaParticipantStatus.NotReady;
+                        logger.LogInformation("Setting {player} as not ready", main.PlayerId);
+                        arena.Participants[main.PlayerId] = ArenaParticipantStatus.NotReady;
                     }
                 }
-            });
+            }
 
-            int totalPlayers = arena.Participants.Count;
-            int readyPlayers = arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready);
+            var totalPlayers = arena.Participants.Count;
+            var readyPlayers = arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready);
 
-            bool isMajorityReady = readyPlayers > (totalPlayers / 2);
+            var isMajorityReady = readyPlayers > (totalPlayers / 2);
             //bool isMajorityReady = readyPlayers >= (readyPlayers / totalPlayers);
 
             List<PlayerId> playersToKick = [];
@@ -211,11 +209,8 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
                     if (isMajorityReady)
                     {
                         ArenaTimerCountdown.Update(ArenaSystemsInterval);
-                        if (!arena.ParticipantsStatusTimeouts.ContainsKey(participant.Key))
-                        {
-                            arena.ParticipantsStatusTimeouts[participant.Key] = 0f;
-                        }
 
+                        arena.ParticipantsStatusTimeouts.TryAdd(participant.Key, 0f);
                         arena.ParticipantsStatusTimeouts[participant.Key] += ArenaSystemsInterval;
 
                         if (arena.ParticipantsStatusTimeouts[participant.Key] >= 30f)
@@ -236,13 +231,13 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
                 logger.LogInformation("{Player} has been timed out for waiting too long.", pId);
                 arena.Participants.Remove(pId);
                 arena.ParticipantsStatusTimeouts.Remove(pId);
-                sRpc?.SendArenaParticipantRegistered(pId, false, arena.Participants.Count);
+                rpc?.SendArenaParticipantRegistered(pId, false, arena.Participants.Count);
             }
 
             if (playersToKick.Count > 0)
             {
-                ArenaUtils.BroadcastRegistrationUpdate();
-                ArenaUtils.BroadcastReadyUpdate();
+                arenaUtils.BroadcastRegistrationUpdate();
+                arenaUtils.BroadcastReadyUpdate();
             }
 
             if (arena.Participants.All(b => b.Value == ArenaParticipantStatus.Ready)
@@ -261,7 +256,7 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
                 SetPlayersStatus(ArenaParticipantStatus.Fighting);
                 foreach (var p in arena.Participants.Keys)
                 {
-                    sRpc?.SendAnnounceFightStarted(p);
+                    rpc?.SendAnnounceFightStarted(p);
                 }
             }
         }
@@ -271,82 +266,82 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
     {
         if (arena.ArenaStatus == ArenaStatus.NotStarted)
         {
-            ecsApi.Query<MainCharacterComponent, TransformComponent>((ref player, ref t) =>
+            foreach (var main in entities.Query<MainCharacter>())
             {
-                var dx = t.Position.X - RArenaCommon.Data.ArenaMiddle.X;
-                var dy = t.Position.Y - RArenaCommon.Data.ArenaMiddle.Y;
+                var dx = main.Position.X - RArenaCommon.Data.ArenaMiddle.X;
+                var dy = main.Position.Y - RArenaCommon.Data.ArenaMiddle.Y;
 
-                double distance = Math.Sqrt(dx * dx + dy * dy);
+                var distance = Math.Sqrt(dx * dx + dy * dy);
                 //double readyRingRadius = RArenaCommon.Data.ArenaRadius / 2;
                 double readyRingRadius = RArenaCommon.Data.ArenaInnerRingRadius;
 
-                bool isParticipant = arena.Participants.TryGetValue(player.PlayerId, out var status);
+                var isParticipant = arena.Participants.TryGetValue(main.PlayerId, out var status);
 
-                if (distance > RArenaCommon.Data.ArenaRadius || t.Position.Z > 300)
+                if (distance > RArenaCommon.Data.ArenaRadius || main.Position.Z > 300)
                 {
                     if (isParticipant)
                     {
-                        logger.LogInformation("{player} left arena area, removing as contestant", player.PlayerId);
-                        arena.Participants.Remove(player.PlayerId);
-                        arena.ParticipantsStatusTimeouts.Remove(player.PlayerId);
-                        sRpc?.SendArenaParticipantRegistered(player.PlayerId, false, arena.Participants.Count);
-                        ArenaUtils.BroadcastRegistrationUpdate();
-                        ArenaUtils.BroadcastReadyUpdate();
+                        logger.LogInformation("{player} left arena area, removing as contestant", main.PlayerId);
+                        arena.Participants.Remove(main.PlayerId);
+                        arena.ParticipantsStatusTimeouts.Remove(main.PlayerId);
+                        rpc?.SendArenaParticipantRegistered(main.PlayerId, false, arena.Participants.Count);
+                        arenaUtils.BroadcastRegistrationUpdate();
+                        arenaUtils.BroadcastReadyUpdate();
                     }
                 }
                 else if (distance <= RArenaCommon.Data.ArenaRadius && distance > readyRingRadius)
                 {
                     if (!isParticipant)
                     {
-                        logger.LogInformation("{player} entered arena area, adding as contestant", player.PlayerId);
-                        arena.Participants[player.PlayerId] = ArenaParticipantStatus.NotReady;
-                        sRpc?.SendArenaParticipantRegistered(player.PlayerId, true, arena.Participants.Count);
-                        ArenaUtils.BroadcastRegistrationUpdate();
+                        logger.LogInformation("{player} entered arena area, adding as contestant", main.PlayerId);
+                        arena.Participants[main.PlayerId] = ArenaParticipantStatus.NotReady;
+                        rpc?.SendArenaParticipantRegistered(main.PlayerId, true, arena.Participants.Count);
+                        arenaUtils.BroadcastRegistrationUpdate();
                     }
                     else if (status != ArenaParticipantStatus.NotReady)
                     {
-                        logger.LogInformation("{player} left inner ring, marking as not ready", player.PlayerId);
-                        arena.Participants[player.PlayerId] = ArenaParticipantStatus.NotReady;
-                        sRpc?.SendArenaParticipantReady(player.PlayerId, false, arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready));
-                        ArenaUtils.BroadcastReadyUpdate();
+                        logger.LogInformation("{player} left inner ring, marking as not ready", main.PlayerId);
+                        arena.Participants[main.PlayerId] = ArenaParticipantStatus.NotReady;
+                        rpc?.SendArenaParticipantReady(main.PlayerId, false, arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready));
+                        arenaUtils.BroadcastReadyUpdate();
                     }
                 }
                 else if (distance <= readyRingRadius)
                 {
                     if (isParticipant && status != ArenaParticipantStatus.Ready)
                     {
-                        logger.LogInformation("{player} has entered inner ring, marking as ready", player.PlayerId);
-                        arena.Participants[player.PlayerId] = ArenaParticipantStatus.Ready;
-                        sRpc?.SendArenaParticipantReady(player.PlayerId, true, arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready));
-                        ArenaUtils.BroadcastReadyUpdate();
+                        logger.LogInformation("{player} has entered inner ring, marking as ready", main.PlayerId);
+                        arena.Participants[main.PlayerId] = ArenaParticipantStatus.Ready;
+                        rpc?.SendArenaParticipantReady(main.PlayerId, true, arena.Participants.Count(p => p.Value == ArenaParticipantStatus.Ready));
+                        arenaUtils.BroadcastReadyUpdate();
                     }
                 }
-            });
+            }
         }
     }
 
     public void HandleNotParticipatingPlayers()
     {
-        if (arena.ArenaStatus == ArenaStatus.Ongoing)
+        if (arena.ArenaStatus != ArenaStatus.Ongoing) 
+            return;
+        
+        foreach (var main in entities.Query<MainCharacter>())
         {
-            ecsApi.QueryWithEntity<MainCharacterComponent, VitalsComponent>((ref main, ref vital, id) =>
+            if (main.ParentCellKind == ParentCellKind.Exterior)
+                return;
+                
+            if (!arena.PlayersAreas[main.PlayerId].Contains(RArenaCommon.Data.ArenaCellId))
+                return;
+                
+            if (!arena.Participants.ContainsKey(main.PlayerId) || arena.Participants[main.PlayerId] == ArenaParticipantStatus.Loss)
             {
-                ref var t = ref ecsApi.GetComponentRef<TransformComponent>(id);
-                ref var cell = ref ecsApi.GetComponentRef<ParentCellComponent>(id);
-                //if (!rArena.Participants.ContainsKey(main.PlayerId)) return;
-                if (cell.Kind == ParentCellKind.Exterior) return;
-                //logger.LogWarning(rArena.PlayersAreas.Values.ToString());
-                if (!arena.PlayersAreas[main.PlayerId].Contains(RArenaCommon.Data.ArenaCellId)) return;
-                if (!arena.Participants.ContainsKey(main.PlayerId) || arena.Participants[main.PlayerId] == ArenaParticipantStatus.Loss)
+                if (main.Position.Z < 210)
                 {
-                    if (t.Position.Z < 210)
-                    {
-                        ArenaUtils.Teleport(id, ref t, RArenaCommon.Data.ArenaSpectatorStand);
-                    }
-
-                    ArenaUtils.Heal(id, ref vital);
+                    main.Position = RArenaCommon.Data.ArenaSpectatorStand;
                 }
-            });
+
+                ArenaUtils.Heal(main);
+            }
         }
     }
 
@@ -356,7 +351,6 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
         {
             Reset();
             logger.LogWarning("Match started in invalid mode, reset invoked!");
-            return;
         }
     }
 
@@ -379,7 +373,7 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
 
     public void HandleArenaTournament()
     {
-        //TODO
+        // TODO
     }
 
     public void MercyGiveUp(PlayerId playerId)
@@ -388,49 +382,47 @@ internal sealed partial class ArenaSystem(Arena arena, EcsApi ecsApi, RArenaServ
         arena.Participants[playerId] = ArenaParticipantStatus.Loss;
         foreach (var p in arena.Participants.Keys)
         {
-            sRpc.SendPlayerEliminated(p, playerId);
+            rpc.SendPlayerEliminated(p, playerId);
         }
     }
 
     public void CheckPlayersOutsideArena()
     {
-        ecsApi.Query<MainCharacterComponent, TransformComponent, ParentCellComponent>((ref player, ref t, ref cell) =>
+        foreach (var main in entities.Query<MainCharacter>())
         {
-            if (arena.Participants.TryGetValue(player.PlayerId, out var status) && status == ArenaParticipantStatus.Fighting)
+            if (arena.Participants.TryGetValue(main.PlayerId, out var status) && status == ArenaParticipantStatus.Fighting)
             {
-                if (cell.Kind == ParentCellKind.Exterior)
+                if (main.ParentCellKind == ParentCellKind.Exterior)
                 {
-                    MercyGiveUp(player.PlayerId);
+                    MercyGiveUp(main.PlayerId);
                     return;
                 }
 
-                float dx = t.Position.X - RArenaCommon.Data.ArenaMiddle.X;
-                float dy = t.Position.Y - RArenaCommon.Data.ArenaMiddle.Y;
+                var dx = main.Position.X - RArenaCommon.Data.ArenaMiddle.X;
+                var dy = main.Position.Y - RArenaCommon.Data.ArenaMiddle.Y;
 
-                double distance = Math.Sqrt(dx * dx + dy * dy);
+                var distance = Math.Sqrt(dx * dx + dy * dy);
 
                 if (distance > RArenaCommon.Data.ArenaRadius + RArenaCommon.Data.MercyGiveUpMargin)
                 {
-                    logger.LogInformation("{Player} mercifully gave up", player.PlayerId);
-                    MercyGiveUp(player.PlayerId);
+                    logger.LogInformation("{Player} mercifully gave up", main.PlayerId);
+                    MercyGiveUp(main.PlayerId);
                 }
             }
-        });
+        }
     }
 
     public void SetPlayersImmortality(bool enabled)
     {
         logger.LogInformation("{State} players immortality!", enabled ? "Enabling" : "Lifting");
 
-        ecsApi.QueryWithEntity<VitalsComponent>((ref vital, id) =>
+        foreach (var main in entities.Query<MainCharacter>())
         {
             if (enabled)
             {
-                //logger.LogError("Vital modified, arena status: {status}", rArena.ArenaStatus.ToString());
-                // vital.Hp = vital.HpBase;
-                ArenaUtils.Heal(id, ref vital);
+                ArenaUtils.Heal(main);
             }
-        });
+        }
 
         arena.PlayersImmortal = enabled;
     }

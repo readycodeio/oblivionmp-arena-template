@@ -9,12 +9,13 @@ namespace ArenaMod.Server;
 [ModEntry]
 public sealed partial class Mod(IDependencyContainer services, ILogger logger)
 {
-    private void Start()
+    private void Init()
     {
         services.RegisterSingleton<Arena>();
+        services.RegisterSingleton<ArenaUtils>();
         services.RegisterSingleton<ArenaAreaEventHandlers>();
+        services.RegisterSingleton<ArenaSaveFileDispatcher>();
 
-        ArenaSaveFileDispatcher.Logger = logger; // TODO: What?
         logger.LogInformation("Arena server mod initialized");
     }
 }

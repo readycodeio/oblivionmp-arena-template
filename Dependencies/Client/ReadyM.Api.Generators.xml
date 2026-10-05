@@ -1043,14 +1043,14 @@
             <summary>A mod is entered through one class, which is a thing only the whole compilation knows.</summary>
         </member>
         <member name="T:ReadyM.Api.Generators.Mods.ModEntryGenerator">
-            Completes a <c>[ModEntry]</c> class: the folder the mod was loaded from, the start the loader
+            Completes a <c>[ModEntry]</c> class: the folder the mod was loaded from, the init the loader
             calls, and the registration that tells the loader this assembly is a mod at all.
         </member>
         <member name="T:ReadyM.Api.Generators.Mods.ModEntryShape">
             What a class has to look like to be a mod's entry point, for the generator and the analyzer alike.
         </member>
-        <member name="M:ReadyM.Api.Generators.Mods.ModEntryShape.ReadStart(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
-            The start the loader calls, or null when the entry point declared none it can call.
+        <member name="M:ReadyM.Api.Generators.Mods.ModEntryShape.ReadInit(Microsoft.CodeAnalysis.INamedTypeSymbol,Microsoft.CodeAnalysis.Location,System.Collections.Generic.List{Microsoft.CodeAnalysis.Diagnostic})">
+            The init the loader calls, or null when the entry point declared none it can call.
         </member>
         <member name="T:ReadyM.Api.Generators.ReplicatedComponentEmitter">
              Emits a component that replicates: the dirty and api masks, the change component, the

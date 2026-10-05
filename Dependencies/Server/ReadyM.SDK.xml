@@ -696,11 +696,11 @@
         <member name="M:ReadyM.SDK.Mods.ModEntryRegistry.Declares(System.Reflection.Assembly)">
             Whether this assembly is a mod written against the SDK rather than against a base class (old SDK v0).
         </member>
-        <member name="M:ReadyM.SDK.Mods.ModEntryRegistry.Start(System.Reflection.Assembly,ReadyM.Api.DI.IDependencyContainer,System.String)">
+        <member name="M:ReadyM.SDK.Mods.ModEntryRegistry.Init(System.Reflection.Assembly,ReadyM.Api.DI.IDependencyContainer,System.String)">
             Builds the entry class out of the container and runs what it declared, if anything.
         </member>
-        <member name="M:ReadyM.SDK.Mods.ModEntryRegistry.StartAll(System.Collections.Generic.IEnumerable{System.ValueTuple{System.Reflection.Assembly,System.String}},ReadyM.Api.DI.IDependencyContainer,System.Action{System.Reflection.Assembly},System.Action{System.Reflection.Assembly,System.Exception})">
-            Starts the entry point of every assembly given, in the order given, and says how many ran.
+        <member name="M:ReadyM.SDK.Mods.ModEntryRegistry.InitAll(System.Collections.Generic.IEnumerable{System.ValueTuple{System.Reflection.Assembly,System.String}},ReadyM.Api.DI.IDependencyContainer,System.Action{System.Reflection.Assembly},System.Action{System.Reflection.Assembly,System.Exception})">
+            Initializes the entry point of every assembly given, in the order given, and says how many ran.
         </member>
         <member name="T:ReadyM.SDK.Services.IService">
             What every [Service] compiles down to. Implemented by generated code.

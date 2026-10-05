@@ -1,6 +1,6 @@
 ﻿namespace ArenaMod.Client;
 
-internal static class RArenaClient
+internal static class ArenaClient
 {
     public static bool IsRegistered = false;
     public static bool IsReady = false;

@@ -2,12 +2,12 @@ using Timer = System.Timers.Timer;
 
 namespace ArenaMod.Server.Conditions;
 
-public class ArenaTimerContition : ArenaCondition
+public class TimerCondition : ArenaCondition
 {
     private readonly Timer _timer = new();
     private bool _hasFinished;
 
-    public ArenaTimerContition(float timeLimit)
+    public TimerCondition(float timeLimit)
     {
         _timer.Interval = timeLimit * 1000;
         _timer.AutoReset = false;

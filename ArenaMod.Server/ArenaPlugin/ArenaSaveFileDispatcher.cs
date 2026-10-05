@@ -2,34 +2,33 @@
 
 namespace ArenaMod.Server.ArenaPlugin;
 
-internal static class ArenaSaveFileDispatcher
+internal class ArenaSaveFileDispatcher(ILogger logger)
 {
-    public static ILogger? Logger;
+    private static readonly string SavesDir = Path.Combine(Directory.GetCurrentDirectory(), "saves");
+    
+    public readonly string SavesPlayersDir = Path.Combine(SavesDir, "players");
+    public readonly string SavesLoadoutDir = Path.Combine(SavesDir, "arena");
 
-    public static readonly string SavesDir = Path.Combine(Directory.GetCurrentDirectory(), "saves");
-    public static readonly string SavesPlayersDir = Path.Combine(SavesDir, "players");
-    public static readonly string SavesLoadoutDir = Path.Combine(SavesDir, "arena");
-
-    public static readonly Dictionary<string, bool> SaveFileSlots = new();
-    public static readonly Dictionary<Guid, string> PlayerLoadouts = new();
+    public readonly Dictionary<string, bool> SaveFileSlots = new();
+    public readonly Dictionary<Guid, string> PlayerLoadouts = new();
 
     private static readonly Random Rand = new(DateTime.Now.Millisecond);
 
-    public static void InitializeLoadouts()
+    public void InitializeLoadouts()
     {
         if (!Directory.Exists(SavesLoadoutDir))
         {
             Directory.CreateDirectory(SavesLoadoutDir);
         }
 
-        string[] files = Directory.GetFiles(SavesLoadoutDir);
+        var files = Directory.GetFiles(SavesLoadoutDir);
         if (files.Length <= 0)
         {
-            Logger?.LogWarning("No custom save files to load, place them at {path}", SavesLoadoutDir);
+            logger.LogWarning("No custom save files to load, place them at {path}", SavesLoadoutDir);
             return;
         }
 
-        foreach (string file in files)
+        foreach (var file in files)
         {
             if (!SaveFileSlots.ContainsKey(file))
             {
@@ -40,7 +39,7 @@ internal static class ArenaSaveFileDispatcher
         }
     }
 
-    public static string GetRandomLoadout()
+    public string GetRandomLoadout()
     {
         var availableLoadouts = SaveFileSlots.Where(x => !x.Value).Select(x => x.Key).ToList();
 
@@ -49,15 +48,15 @@ internal static class ArenaSaveFileDispatcher
             return string.Empty;
         }
 
-        string chosenLoadout = availableLoadouts[Rand.Next(availableLoadouts.Count)];
+        var chosenLoadout = availableLoadouts[Rand.Next(availableLoadouts.Count)];
         SaveFileSlots[chosenLoadout] = true;
 
         return chosenLoadout;
     }
 
-    public static void ReleaseLoadout(Guid playerGuid)
+    public void ReleaseLoadout(Guid playerGuid)
     {
-        if (PlayerLoadouts.TryGetValue(playerGuid, out string? usedLoadout))
+        if (PlayerLoadouts.TryGetValue(playerGuid, out var usedLoadout))
         {
             if (SaveFileSlots.ContainsKey(usedLoadout))
             {

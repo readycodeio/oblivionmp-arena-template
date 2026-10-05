@@ -1,21 +1,22 @@
 using ArenaMod.Server.ArenaPlugin;
 using ArenaMod.Server.ArenaPlugin.Enums;
-using ReadyM.Relay.Common.Oblivion.ECS.Components;
-using ReadyM.Relay.Server.Sdk.Ecs;
+using OblivionMp.Sdk.Common.Archetypes;
+using ReadyM.SDK.Server.Entities;
 
 namespace ArenaMod.Server.Conditions;
 
-public class ArenaPlayerLossCondition(Arena arena, EcsApi ecsApi, RArenaServerRpc sRpc) : ArenaCondition
+public class PlayerLossCondition(Arena arena, IEntities entities, RpcHandlers rpc) : ArenaCondition
 {
     private readonly float _playerHpRateLossLimit = 0.3f;
     private readonly float _playerHpLossLimit = 1;
     private readonly ArenaLossCondition _arenaHpLossCondition;
 
-    public ArenaPlayerLossCondition(Arena arena, EcsApi ecsApi, RArenaServerRpc sRpc,
+    public PlayerLossCondition(Arena arena, IEntities entities, RpcHandlers rpc,
         int priority,
-        float targetHpPercentage = 0.3f, float targetHpLimit = 1,
-        ArenaLossCondition arenaHpLossCondition = ArenaLossCondition.PlayerDead)
-        : this(arena, ecsApi, sRpc)
+        float targetHpPercentage = 0.3f,
+        float targetHpLimit = 1,
+        ArenaLossCondition arenaHpLossCondition = ArenaLossCondition.PlayerDead
+    ) : this(arena, entities, rpc)
     {
         Priority = priority;
         _playerHpRateLossLimit = targetHpPercentage;
@@ -25,23 +26,23 @@ public class ArenaPlayerLossCondition(Arena arena, EcsApi ecsApi, RArenaServerRp
 
     public override void OnUpdate()
     {
-        ecsApi.QueryWithEntity<MainCharacterComponent, VitalsComponent>((ref main, ref vital, id) =>
+        foreach (var main in entities.Query<MainCharacter>())
         {
             if (arena.Participants.TryGetValue(main.PlayerId, out var status) && status == ArenaParticipantStatus.Fighting)
             {
-                bool playerLost = false;
+                var playerLost = false;
 
-                float maxHp = vital.HpBase > 0 ? vital.HpBase : 1;
-                float currentHpPercentage = vital.Hp / maxHp;
+                var maxHp = main.HpBase > 0 ? main.HpBase : 1;
+                var currentHpPercentage = main.Hp / maxHp;
 
                 switch (_arenaHpLossCondition)
                 {
                     case ArenaLossCondition.PlayerDead:
-                        if (vital.Hp <= _playerHpLossLimit) playerLost = true;
+                        if (main.Hp <= _playerHpLossLimit) playerLost = true;
                         break;
 
                     case ArenaLossCondition.PlayerHpBelowLimit:
-                        if (currentHpPercentage <= _playerHpRateLossLimit || vital.Hp <= _playerHpLossLimit) playerLost = true;
+                        if (currentHpPercentage <= _playerHpRateLossLimit || main.Hp <= _playerHpLossLimit) playerLost = true;
                         break;
                 }
 
@@ -50,21 +51,16 @@ public class ArenaPlayerLossCondition(Arena arena, EcsApi ecsApi, RArenaServerRp
                     arena.Participants[main.PlayerId] = ArenaParticipantStatus.Loss;
                     foreach (var p in arena.Participants.Keys)
                     {
-                        sRpc.SendPlayerEliminated(p, main.PlayerId);
+                        rpc.SendPlayerEliminated(p, main.PlayerId);
                     }
-                    ArenaUtils.Heal(id, ref vital);
+
+                    ArenaUtils.Heal(main);
                 }
             }
-        });
+        }
     }
 
-    public override bool WasFullfilled()
-    {
-        return false;
-    }
+    public override bool WasFullfilled() => false;
 
-    public override void Reset()
-    {
-
-    }
+    public override void Reset() { }
 }

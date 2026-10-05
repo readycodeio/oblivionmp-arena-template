@@ -1,6 +1,7 @@
-using ArenaMod.Common;
+﻿using ArenaMod.Common;
 using Microsoft.Extensions.Logging;
 using OblivionMp.Sdk;
+using OblivionMp.Sdk.Archetypes.Extensions;
 using OblivionMpCSharpMod;
 using ReadyM.Api.DI;
 using ReadyM.SDK.Attributes;
@@ -14,25 +15,20 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
 {
     public static string MyArea = string.Empty;
     public static bool IsInArena = false;
-    private RArenaServerRpc _serverRpc = null!;
-    public static RArenaTimerCountdown RArenaTimerCountdown { get; private set; } = null!;
-    public static DetectDeadPlayerSystem detect = null!;
+    
+    private RpcHandlers rpc => services.Resolve<RpcHandlers>();
 
     // Runs once when the mod loads, before Start. Register RPC handlers, services and components.
-    private void Start()
+    private void Init()
     {
-        // RPC handler classes must be registered for their generated handlers to be wired up.
-        services.RegisterSingleton<RArenaServerRpc>();
-
-        _serverRpc = services.Resolve<RArenaServerRpc>();
-        RArenaTimerCountdown = services.Resolve<RArenaTimerCountdown>();
-        detect = services.Resolve<DetectDeadPlayerSystem>();
-
+        services.RegisterSingleton<ArenaUtils>();
+        services.RegisterSingleton<IChat, DummyChat>();
+        
         SDK.Input.RegisterKeyBind(ModifierKeys.Control | ModifierKeys.Shift, Key.P, () =>
         {
             if (SDK.Entities.LocalMainCharacter is { } me)
             {
-                detect.HasAnnounced = false;
+                services.Resolve<DetectDeadPlayerSystem>().HasAnnounced = false;
                 me.RebirthLocalPlayer();
             }
         });
@@ -62,7 +58,7 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
             if (SDK.Entities.LocalMainCharacter is { } me)
             {
                 logger.LogInformation("Sending request to heal {who}", "local player");
-                _serverRpc.SendDemandHeal();
+                rpc.SendDemandHeal();
             }
         });
         SDK.Input.RegisterKeyBind(Key.NUM_THREE, () =>
@@ -70,7 +66,7 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
             if (SDK.Entities.LocalMainCharacter is { } me)
             {
                 logger.LogInformation("Sending request to heal {who}", "all players");
-                _serverRpc.SendDemandHealAllPlayers();
+                rpc.SendDemandHealAllPlayers();
             }
         });
         SDK.Input.RegisterKeyBind(Key.NUM_SEVEN, () =>
@@ -78,7 +74,7 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
             if (SDK.Entities.LocalMainCharacter is { } me)
             {
                 logger.LogInformation("Sending request to switch position");
-                _serverRpc.SendDemandPositionChange();
+                rpc.SendDemandPositionChange();
             }
         });
         SDK.Input.RegisterKeyBind(ModifierKeys.Control, Key.NUM_SEVEN, () =>
@@ -87,7 +83,7 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
             {
                 logger.LogInformation("Sending request to switch position with local position override");
                 me.Position = RArenaCommon.Data.ArenaSpectatorStand;
-                _serverRpc.SendDemandPositionChange();
+                rpc.SendDemandPositionChange();
             }
         });
 #endif

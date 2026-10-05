@@ -34,7 +34,7 @@
         </member>
         <member name="M:ReadyM.Modloader.ModLoader.StartModEntryPoints">
             <summary>
-            Builds each [ModEntry] class and runs its Start, once every mod has been through Init.
+            Builds each [ModEntry] class and runs its Init, once every mod has been through the loader Init.
             </summary>
         </member>
         <member name="P:ReadyM.Modloader.Mods.ICSharpMod.Name">

@@ -109,6 +109,14 @@
         <member name="M:OblivionMp.Sdk.Api.MarkerApi.#ctor(OblivionMpCSharpMod.NativeMarkerControl)">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
         </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Extensions.MainCharacterExtensions.RebirthLocalPlayer(OblivionMp.Sdk.Common.Archetypes.MainCharacter)">
+            <inheritdoc cref="M:OblivionMp.Sdk.Archetypes.Extensions.MainCharacterExtensions.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.RebirthLocalPlayer"/>
+        </member>
+        <member name="M:OblivionMp.Sdk.Archetypes.Extensions.MainCharacterExtensions.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.RebirthLocalPlayer">
+            <summary>
+            Rebirths (revives) the local player character.
+            </summary>
+        </member>
         <member name="T:OblivionMp.Sdk.Archetypes.Mixins.LocalVisibilityView">
             Walks this shape by chunk. Valid only inside the loop that produced it.
         </member>
@@ -133,6 +141,12 @@
             <remarks>
             Use inside queries instead of the property setter.
             </remarks>
+        </member>
+        <member name="T:OblivionMp.Sdk.Archetypes.Mixins.MappedActorView">
+            Walks this shape by chunk. Valid only inside the loop that produced it.
+        </member>
+        <member name="P:OblivionMp.Sdk.Archetypes.Mixins.MappedActorView.Handle">
+            The way out to anything a chunk view cannot do, such as a structural change after the loop.
         </member>
         <member name="T:OblivionMp.Sdk.Entities.DroppedItem.ReadyDroppedItem">
             <summary>

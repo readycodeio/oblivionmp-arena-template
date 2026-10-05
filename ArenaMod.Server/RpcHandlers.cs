@@ -10,7 +10,7 @@ namespace ArenaMod.Server;
 // [ServerToClient] Send methods are generated. Each handler gets an RpcContext with the sender.
 // Register in Mod.Init.
 [RpcHandlersFor(typeof(ArenaRpcContracts))]
-public sealed partial class RArenaServerRpc(IEntities entities)
+public sealed partial class RpcHandlers(IEntities entities)
 {
     partial void OnDemandHeal(RpcContext context)
     {

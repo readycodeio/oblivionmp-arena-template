@@ -4,14 +4,15 @@ using ReadyM.Api.Idents;
 
 namespace ArenaMod.Server.Conditions;
 
-public class ArenaLmsCondition(Arena arena) : ArenaCondition
+public class LastManStandingCondition(Arena arena) : ArenaCondition
 {
     private int _playersRemaining;
     private bool _hasFinished;
     private bool _hasInit;
-    private PlayerId _winner = PlayerId.Invalid;
 
-    public ArenaLmsCondition(Arena arena, int priority) : this(arena)
+    public PlayerId Winner { get; private set; } = PlayerId.Invalid;
+
+    public LastManStandingCondition(Arena arena, int priority) : this(arena)
     {
         Priority = priority;
     }
@@ -35,8 +36,8 @@ public class ArenaLmsCondition(Arena arena) : ArenaCondition
         if (_playersRemaining < 2)
         {
             _hasFinished = true;
-            _winner = arena.Participants.FirstOrDefault(b => b.Value == ArenaParticipantStatus.Fighting).Key;
-            arena.Participants[_winner] = ArenaParticipantStatus.Win;
+            Winner = arena.Participants.FirstOrDefault(b => b.Value == ArenaParticipantStatus.Fighting).Key;
+            arena.Participants[Winner] = ArenaParticipantStatus.Win;
         }
     }
 
@@ -50,8 +51,6 @@ public class ArenaLmsCondition(Arena arena) : ArenaCondition
         _playersRemaining = -1;
         _hasFinished = false;
         _hasInit = false;
-        _winner = PlayerId.Invalid;
+        Winner = PlayerId.Invalid;
     }
-
-    public PlayerId Winner => _winner;
 }

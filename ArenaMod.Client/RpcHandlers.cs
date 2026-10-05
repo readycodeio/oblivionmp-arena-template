@@ -14,7 +14,7 @@ namespace ArenaMod.Client;
 // Client side of the server-RPC contracts. Implement the [ServerToClient] handlers; the
 // [ClientToServer] Send methods are generated. Register in Mod.RegisterServices.
 [RpcHandlersFor(typeof(ArenaRpcContracts))]
-public sealed partial class RArenaServerRpc(IEntities entities, IChat chat, ILogger logger)
+public sealed partial class RpcHandlers(IEntities entities, ArenaUtils arenaUtils, IChat chat, ILogger logger)
 {
     partial void OnAreaJoined(string area)
     {
@@ -22,7 +22,7 @@ public sealed partial class RArenaServerRpc(IEntities entities, IChat chat, ILog
         if (area.Contains(RArenaCommon.Data.ArenaCellId))
         {
             Mod.IsInArena = true;
-            RArenaUtils.DisplayArenaInfo();
+            arenaUtils.DisplayArenaInfo();
         }
         else
         {
@@ -34,48 +34,48 @@ public sealed partial class RArenaServerRpc(IEntities entities, IChat chat, ILog
     {
         logger.LogInformation("Your arena status has been changed to {status}.", registered);
         
-        RArenaClient.IsRegistered = registered;
-        RArenaClient.RArenaParticipantCount = (short)allRegistered;
-        RArenaUtils.DisplayArenaParticipantStatus();
+        ArenaClient.IsRegistered = registered;
+        ArenaClient.RArenaParticipantCount = (short)allRegistered;
+        arenaUtils.DisplayArenaParticipantStatus();
         if (registered)
         {
-            RArenaUtils.DisplayArenaInfo();
+            arenaUtils.DisplayArenaInfo();
         }
         else
         {
             SDK.GameMessage.HideInfoMessage();
-            RArenaClient.InfoMessageDisplayedString = string.Empty;
+            ArenaClient.InfoMessageDisplayedString = string.Empty;
         }
     }
 
     partial void OnUpdateParticipantRegistered(int allRegistered)
     {
-        RArenaClient.RArenaParticipantCount = (short)allRegistered;
-        RArenaUtils.DisplayArenaInfo();
+        ArenaClient.RArenaParticipantCount = (short)allRegistered;
+        arenaUtils.DisplayArenaInfo();
     }
 
     partial void OnArenaParticipantReady(bool ready, int allReady)
     {
         logger.LogInformation("Your ready status has been changed to {status}.", ready);
         
-        RArenaClient.IsReady = ready;
-        RArenaClient.RArenaParticipantReadyCount = (short)allReady;
-        RArenaUtils.DisplayArenaReadyStatus();
-        RArenaUtils.DisplayArenaInfo();
+        ArenaClient.IsReady = ready;
+        ArenaClient.RArenaParticipantReadyCount = (short)allReady;
+        arenaUtils.DisplayArenaReadyStatus();
+        arenaUtils.DisplayArenaInfo();
     }
 
     partial void OnUpdateParticipantReady(int allReady)
     {
-        RArenaClient.RArenaParticipantReadyCount = (short)allReady;
-        RArenaUtils.DisplayArenaInfo();
+        ArenaClient.RArenaParticipantReadyCount = (short)allReady;
+        arenaUtils.DisplayArenaInfo();
     }
 
     partial void OnAnnounceWinner(PlayerId winner)
     {
         logger.LogError("got the winner");
         
-        RArenaClient.RArenaParticipantReadyCount = 0;
-        RArenaUtils.DisplayWinner(winner);
+        ArenaClient.RArenaParticipantReadyCount = 0;
+        arenaUtils.DisplayWinner(winner);
     }
 
     partial void OnAnnounceFightStarted()

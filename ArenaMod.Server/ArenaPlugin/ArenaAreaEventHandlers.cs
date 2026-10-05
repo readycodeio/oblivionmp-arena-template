@@ -5,7 +5,7 @@ using ReadyM.Relay.Server.Sdk.Events;
 
 namespace ArenaMod.Server.ArenaPlugin;
 
-public sealed class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, RArenaServerRpc sRpc, ILogger logger)
+public sealed class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, RpcHandlers rpc, ILogger logger)
     : ServerEventHandlersBase(events)
 {
     protected override void Subscribe(ServerEventsApi events)
@@ -22,7 +22,7 @@ public sealed class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, 
 
     private void Events_OnPlayerJoinedArea(PlayerId pId, AreaId aId)
     {
-        sRpc.SendAreaJoined(pId, aId.ToString());
+        rpc.SendAreaJoined(pId, aId.ToString());
         arena.PlayersAreas[pId] = aId.ToString();
     }
 

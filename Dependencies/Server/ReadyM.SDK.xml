@@ -776,6 +776,13 @@
             </remarks>
             <exception cref="T:ReadyM.SDK.Services.ServiceOrderException">The constraints contain a cycle.</exception>
         </member>
+        <member name="M:ReadyM.SDK.Services.ServiceRegistry.RegisteredFor(ReadyM.Api.DI.IDependencyContainer)">
+            <summary>Whether <see cref="M:ReadyM.SDK.Services.ServiceRegistry.RegisterAll(ReadyM.Api.DI.IDependencyContainer,Microsoft.Extensions.Logging.ILogger)"/> has already run for this container.</summary>
+            <remarks>
+            For a host to check its own ordering. Nothing a mod declared is resolvable before it, so asking
+            too early is a mistake worth catching where it happens rather than on the first tick.
+            </remarks>
+        </member>
         <member name="M:ReadyM.SDK.Services.ServiceRegistry.StartAll(ReadyM.Api.DI.IDependencyContainer)">
             <summary>Starts every service that declared a Start, which is what [Service] calls ready.</summary>
             <returns>How many were started, which a game can log.</returns>

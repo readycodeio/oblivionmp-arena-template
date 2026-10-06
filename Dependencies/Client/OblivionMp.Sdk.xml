@@ -27,24 +27,6 @@
         <member name="M:OblivionMp.Sdk.Api.IMarkerApi.SetMarkerOpacity(OblivionMp.Sdk.Values.MarkerHandle,System.Single)">
             <summary> Sets a marker's opacity, from 0 (fully transparent) to 1 (fully opaque). No-op for <see cref="P:OblivionMp.Sdk.Values.MarkerHandle.None"/>.</summary>
         </member>
-        <member name="P:OblivionMp.Sdk.Api.IOblivionEntityApi.AreaPlayers">
-            <summary>
-            Players in the local player's current area including the local player.
-            </summary>
-        </member>
-        <member name="P:OblivionMp.Sdk.Api.IOblivionEntityApi.AllDroppedItems">
-            <summary>
-            Gets all dropped items in the game world.
-            </summary>
-        </member>
-        <member name="M:OblivionMp.Sdk.Api.IOblivionEntityApi.SpawnDroppedItem(ReadyM.Relay.Common.Oblivion.FormId,System.Int32,System.Numerics.Vector3)">
-            <summary>
-            Spawns a dropped item in the game world at the specified position.
-            </summary>
-            <param name="item">The item FormId.</param>
-            <param name="stackSize">The number of items in the stack.</param>
-            <param name="position">The position in the game world where the item should be spawned.</param>
-        </member>
         <member name="T:OblivionMp.Sdk.Api.IOblivionGameMessageApi">
             <summary>
             Provides methods related to in-game info messages.
@@ -102,12 +84,6 @@
             <param name="item">The item FormId.</param>
             <param name="stackSize">The number of items in the stack.</param>
             <param name="position">The position in the game world where the item should be spawned.</param>
-        </member>
-        <member name="T:OblivionMp.Sdk.Api.MarkerApi">
-            <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
-        </member>
-        <member name="M:OblivionMp.Sdk.Api.MarkerApi.#ctor(OblivionMpCSharpMod.NativeMarkerControl)">
-            <inheritdoc cref="T:OblivionMp.Sdk.Api.IMarkerApi"/>
         </member>
         <member name="M:OblivionMp.Sdk.Archetypes.Extensions.MainCharacterExtensions.RebirthLocalPlayer(OblivionMp.Sdk.Common.Archetypes.MainCharacter)">
             <inheritdoc cref="M:OblivionMp.Sdk.Archetypes.Extensions.MainCharacterExtensions.&lt;G&gt;$0626E763C2CF3095CFFB9749E5147F4E.RebirthLocalPlayer"/>
@@ -406,6 +382,20 @@
             Does not impact MaxFatigue value.
             </summary>
         </member>
+        <member name="M:OblivionMp.Sdk.IItems.SpawnDroppedItem(ReadyM.Relay.Common.Oblivion.FormId,System.Int32,System.Numerics.Vector3)">
+            <summary>
+            Spawns a dropped item in the game world at the specified position.
+            </summary>
+            <param name="item">The item FormId.</param>
+            <param name="stackSize">The number of items in the stack.</param>
+            <param name="position">The position in the game world where the item should be spawned.</param>
+        </member>
+        <member name="T:OblivionMp.Sdk.Internal.Markers">
+            <inheritdoc cref="T:OblivionMp.Sdk.IMarkers"/>
+        </member>
+        <member name="M:OblivionMp.Sdk.Internal.Markers.#ctor(OblivionMpCSharpMod.NativeMarkerControl)">
+            <inheritdoc cref="T:OblivionMp.Sdk.IMarkers"/>
+        </member>
         <member name="P:OblivionMp.Sdk.Mod.ModDirectory">
             This mod's own folder, which holds its assemblies, manifest and any files it ships.
             <remarks>Pushed in after the constructor runs, so it reads as empty in one.</remarks>
@@ -430,32 +420,6 @@
         <member name="P:OblivionMp.Sdk.SDK.GameMessage">
             <inheritdoc cref="T:OblivionMp.Sdk.Api.IOblivionGameMessageApi"/>
         </member>
-        <member name="P:OblivionMp.Sdk.SDK.Cef">
-            <summary>
-            Browsers, the viewports they are shown in, and what the <c>readym://</c> scheme serves.
-            </summary>
-            <remarks>
-            The layer BELOW the web UI SDK rather than that SDK itself, which is why it is blunt: a nicer surface
-            <para>
-            Usable in a session with no CEF installed. Browsers come back as stand-ins and the engine says once why,
-            so a mod needs no guard for a deployment it cannot control.
-            </para>
-            </remarks>
-        </member>
-        <member name="P:OblivionMp.Sdk.SDK.CefMessages">
-            <summary>
-            Sending named messages to a page.
-            </summary>
-            <remarks>
-            SEPARATE FROM <see cref="P:OblivionMp.Sdk.SDK.Cef"/> because it is a different job: that one knows browsers, viewports and
-            lifetimes, and this one knows what a message is called. Receiving is <see cref="P:OblivionMp.Sdk.SDK.CefMessageCallbacks"/>,
-            because keeping a name and sending under one are not the same thing either.
-            </remarks>
-        </member>
-        <member name="P:OblivionMp.Sdk.SDK.CefMessageCallbacks">
-            <summary>Which callback a message name belongs to. Registering one is how a mod receives.</summary>
-        </member>
-        <!-- Badly formed XML comment ignored for member "T:OblivionMp.Sdk.SDK.Archetypes" -->
         <member name="P:OblivionMp.Sdk.SDK.Archetypes.GlobalPlayerArchetype">
             <summary>s
             Gets the archetype ID of main character entities. Useful for assigning components which need to be persistent across different areas.

@@ -5,7 +5,7 @@ using ReadyM.SDK.Attributes;
 namespace ArenaMod.Client;
 
 [Service]
-public sealed partial class DetectDeadPlayerSystem(IChat chat)
+public sealed partial class DetectDeadPlayerSystem(IChat chat, IPlayers players)
 {
     private float _previousHp = 100f;
 
@@ -13,7 +13,7 @@ public sealed partial class DetectDeadPlayerSystem(IChat chat)
 
     private void Update()
     {
-        if (SDK.Entities.LocalMainCharacter is { } me)
+        if (players.LocalMainCharacter is { } me)
         {
             if (me.Hp < 1 && _previousHp >= 1)
             {

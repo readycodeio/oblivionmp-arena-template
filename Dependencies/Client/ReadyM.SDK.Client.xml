@@ -57,6 +57,26 @@
             entered through [ModEntry] registers them in Init, which is later than it used to be.
             </remarks>
         </member>
+        <member name="M:ReadyM.SDK.Client.DependencyInjectionExtensions.RegisterModDeclarations(ReadyM.Api.DI.IDependencyContainer)">
+            <summary>
+            Registers what the loaded mods declared: their [Service]s and their [RpcHandlersFor] classes.
+            </summary>
+            <remarks>
+            A game calls this once every mod assembly is loaded and before it runs any [ModEntry], because
+            an entry point's Init is the first mod code that can resolve one of these. Both registries are
+            keyed by type and the container appends rather than replaces, so calling it twice costs nothing.
+            </remarks>
+        </member>
+        <member name="M:ReadyM.SDK.Client.DependencyInjectionExtensions.RegisterReadyMSdk(ReadyM.Api.DI.IDependencyContainer)">
+            <summary>
+            The SDK's own services, which exist whatever the mods turn out to declare.
+            </summary>
+            <remarks>
+            A game calls this while it builds its container, before any mod is loaded. What the mods
+            declared is a separate step, <see cref="M:ReadyM.SDK.Client.DependencyInjectionExtensions.RegisterModDeclarations(ReadyM.Api.DI.IDependencyContainer)"/>, because none of it exists
+            until their assemblies are in.
+            </remarks>
+        </member>
         <member name="T:ReadyM.SDK.Client.Entities.ClientComponents">
             <summary>
             Resolves a <see cref="T:ReadyM.SDK.Archetypes.ComponentSet"/> to the store's own component identity.

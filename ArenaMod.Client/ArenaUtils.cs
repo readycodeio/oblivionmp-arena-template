@@ -7,7 +7,11 @@ using ReadyM.SDK.Client.Entities;
 
 namespace ArenaMod.Client;
 
-public class ArenaUtils(ArenaTimerCountdown timer, IEntities entities)
+public class ArenaUtils(
+    ArenaTimerCountdown timer,
+    IEntities entities,
+    IUserInterface ui
+)
 {
     public void DisplayWinner(PlayerId playerId)
     {
@@ -16,7 +20,7 @@ public class ArenaUtils(ArenaTimerCountdown timer, IEntities entities)
 
         if (entities.TryLookup(playerId, out Player player))
         {
-            SDK.GameMessage.ShowMessage(ArenaClient.WinnerString.Replace("{arg}", player.Nickname.ToString()), MessagePosition.Center, 4f);
+            ui.ShowMessage(ArenaClient.WinnerString.Replace("{arg}", player.Nickname.ToString()), MessagePosition.Center, 4f);
         }
     }
 
@@ -26,15 +30,15 @@ public class ArenaUtils(ArenaTimerCountdown timer, IEntities entities)
             return;
 
         if (!ArenaClient.IsRegistered)
-            SDK.GameMessage.HideInfoMessage();
+            ui.HideInfoMessage();
 
-        SDK.GameMessage.ShowMessage(ArenaClient.ParticipantRegisteredString.Replace("{arg}", ArenaClient.IsRegistered ? "added" : "removed"), MessagePosition.TopLeft);
+        ui.ShowMessage(ArenaClient.ParticipantRegisteredString.Replace("{arg}", ArenaClient.IsRegistered ? "added" : "removed"), MessagePosition.TopLeft);
     }
 
     public void DisplayArenaReadyStatus()
     {
         if (!Mod.IsInArena) return;
-        SDK.GameMessage.ShowMessage(ArenaClient.ParticipantReadyString.Replace("{arg}", ArenaClient.IsReady ? "ready" : "not ready"),
+        ui.ShowMessage(ArenaClient.ParticipantReadyString.Replace("{arg}", ArenaClient.IsReady ? "ready" : "not ready"),
             MessagePosition.TopLeft);
     }
 
@@ -43,7 +47,7 @@ public class ArenaUtils(ArenaTimerCountdown timer, IEntities entities)
         if (!Mod.IsInArena || !ArenaClient.IsRegistered) return;
         if (ArenaClient.RArenaParticipantCount < 2)
         {
-            SDK.GameMessage.ShowInfoMessage("At least two players must be present!");
+            ui.ShowInfoMessage("At least two players must be present!");
             return;
         }
 
@@ -60,7 +64,7 @@ public class ArenaUtils(ArenaTimerCountdown timer, IEntities entities)
         if (message != ArenaClient.InfoMessageDisplayedString)
         {
             ArenaClient.InfoMessageDisplayedString = message;
-            SDK.GameMessage.ShowInfoMessage(message);
+            ui.ShowInfoMessage(message);
         }
     }
 }

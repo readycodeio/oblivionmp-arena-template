@@ -14,7 +14,13 @@ namespace ArenaMod.Client;
 // Client side of the server-RPC contracts. Implement the [ServerToClient] handlers; the
 // [ClientToServer] Send methods are generated. Register in Mod.RegisterServices.
 [RpcHandlersFor(typeof(ArenaRpcContracts))]
-public sealed partial class RpcHandlers(IEntities entities, ArenaUtils arenaUtils, IChat chat, ILogger logger)
+public sealed partial class RpcHandlers(
+    IEntities entities,
+    ArenaUtils arenaUtils,
+    IPlayers players,
+    IUserInterface ui,
+    IChat chat, 
+    ILogger logger)
 {
     partial void OnAreaJoined(string area)
     {
@@ -43,7 +49,7 @@ public sealed partial class RpcHandlers(IEntities entities, ArenaUtils arenaUtil
         }
         else
         {
-            SDK.GameMessage.HideInfoMessage();
+            ui.HideInfoMessage();
             ArenaClient.InfoMessageDisplayedString = string.Empty;
         }
     }
@@ -80,15 +86,15 @@ public sealed partial class RpcHandlers(IEntities entities, ArenaUtils arenaUtil
 
     partial void OnAnnounceFightStarted()
     {
-        SDK.GameMessage.HideInfoMessage();
-        SDK.GameMessage.ShowMessage("Fight started!", MessagePosition.Center, 5);
+        ui.HideInfoMessage();
+        ui.ShowMessage("Fight started!", MessagePosition.Center, 5);
     }
 
     partial void OnPlayerEliminated(PlayerId playerId)
     {
-        if (playerId.Equals(SDK.Entities.LocalPlayer?.PlayerId))
+        if (playerId.Equals(players.LocalPlayer?.PlayerId))
         {
-            SDK.GameMessage.ShowMessage("You have been eliminated!");
+            ui.ShowMessage("You have been eliminated!");
         }
 
         if (entities.TryLookup(playerId, out Player player))
@@ -101,7 +107,7 @@ public sealed partial class RpcHandlers(IEntities entities, ArenaUtils arenaUtil
     {
         if (Mod.IsInArena)
         {
-            SDK.GameMessage.ShowMessage($"Fight starts in {timeLeft} second(s)!", MessagePosition.Center, 2);
+            ui.ShowMessage($"Fight starts in {timeLeft} second(s)!", MessagePosition.Center, 2);
         }
     }
 }

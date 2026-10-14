@@ -5,7 +5,7 @@ using ReadyM.SDK.Attributes;
 
 namespace ArenaMod.Server;
 
-// The server mod's entry point. The plugin host instantiates the single ServerModBase-derived class.
+// The server mod's entry point.
 [ModEntry]
 public sealed partial class Mod(IDependencyContainer services, ILogger logger)
 {
@@ -13,7 +13,6 @@ public sealed partial class Mod(IDependencyContainer services, ILogger logger)
     {
         services.RegisterSingleton<Arena>();
         services.RegisterSingleton<ArenaUtils>();
-        services.RegisterSingleton<ArenaAreaEventHandlers>();
         services.RegisterSingleton<ArenaSaveFileDispatcher>();
 
         logger.LogInformation("Arena server mod initialized");

@@ -2,31 +2,32 @@
 using Microsoft.Extensions.Logging;
 using ReadyM.Api.Idents;
 using ReadyM.Relay.Server.Sdk.Events;
+using ReadyM.SDK.Attributes;
 
 namespace ArenaMod.Server.ArenaPlugin;
 
-public sealed class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, RpcHandlers rpc, ILogger logger)
-    : ServerEventHandlersBase(events)
+[Service]
+public sealed partial class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, RpcHandlers rpc, ILogger logger)
 {
-    protected override void Subscribe(ServerEventsApi events)
+    private void Start()
     {
-        events.OnPlayerJoinedArea += Events_OnPlayerJoinedArea;
-        events.OnPlayerLeftArea += Events_OnPlayerLeftArea;
+        events.OnPlayerJoinedArea += OnPlayerJoinedArea;
+        events.OnPlayerLeftArea += OnPlayerLeftArea;
     }
 
-    protected override void Unsubscribe(ServerEventsApi events)
+    private void Stop()
     {
-        events.OnPlayerJoinedArea -= Events_OnPlayerJoinedArea;
-        events.OnPlayerLeftArea -= Events_OnPlayerLeftArea;
+        events.OnPlayerJoinedArea -= OnPlayerJoinedArea;
+        events.OnPlayerLeftArea -= OnPlayerLeftArea;
     }
 
-    private void Events_OnPlayerJoinedArea(PlayerId pId, AreaId aId)
+    private void OnPlayerJoinedArea(PlayerId pId, AreaId aId)
     {
         rpc.SendAreaJoined(pId, aId.ToString());
         arena.PlayersAreas[pId] = aId.ToString();
     }
 
-    private void Events_OnPlayerLeftArea(PlayerId pId, AreaId aId)
+    private void OnPlayerLeftArea(PlayerId pId, AreaId aId)
     {
         if (!aId.ToString().Contains("L_PersistentDungeon-1C60F"))
             return;

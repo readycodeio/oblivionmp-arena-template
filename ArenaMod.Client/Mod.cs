@@ -8,7 +8,7 @@ using ReadyM.Sdk.Common.Input;
 
 namespace ArenaMod.Client;
 
-// The mod's entry point. The modloader instantiates the single class deriving from ModBase.
+// The mod's entry point.
 [ModEntry]
 public sealed partial class Mod(
     IDependencyContainer services,
@@ -33,7 +33,7 @@ public sealed partial class Mod(
             if (players.LocalMainCharacter is { } me)
             {
                 services.Resolve<DetectDeadPlayerSystem>().HasAnnounced = false;
-                me.RebirthLocalPlayer();
+                me.ResurrectLocalPlayer();
             }
         });
 

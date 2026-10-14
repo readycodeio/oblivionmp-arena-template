@@ -20,7 +20,8 @@ An OB:MP mod is two halves that share a common core. Client mods are handed to p
 - `ArenaMod.Client/`: loaded by the game. `Mod.cs` is the entry point and binds keys, `ExampleServerRpc.cs` receives server messages and drives the HUD, `DetectDeadPlayerSystem.cs` prints the rules when you die, `RArenaClient.cs` holds the HUD strings.
 - `ArenaMod.Server/`: loaded by the relay. `Mod.cs` registers everything. `RArenaPlugin/RArenaSystem.cs` is the match loop, `RArenaConditions.cs` the loss and win rules, `RArenaAreaEventHandlers.cs` reacts to players entering and leaving the arena cell, `RArenaSaveFileDispatcher.cs` hands connecting players a preset save file.
 - `Content/manifest.json`: mod id, name, version, dependencies.
-- `Dependencies/`: the OblivionMP SDK assemblies the projects compile against. `Client/` is what the game provides, `Server/` what the relay provides. They are referenced with `Private=false` and never copied into your mod.
+
+The projects compile against the OblivionMP SDK packages from NuGet, one per half: `ReadyM.SDK.Oblivion.Common` for the shared project, `ReadyM.SDK.Oblivion.Client` for the game and `ReadyM.SDK.Oblivion.Server` for the relay. The game and the relay provide those assemblies at runtime, so they never end up in your mod folder.
 
 ## How the arena sample works
 
@@ -36,7 +37,7 @@ Ctrl+Shift+P respawns you if you die. Debug builds also bind numpad keys to heal
 ## Getting started
 
 1. Clone this repository.
-2. Open `ArenaMod.sln` in your C# IDE and build it. All dependencies resolve from `Dependencies/`.
+2. Open `ArenaMod.sln` in your C# IDE and build it. The SDK packages restore from NuGet.
 3. Package it:
 
    ```powershell

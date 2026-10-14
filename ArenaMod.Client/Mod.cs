@@ -26,7 +26,6 @@ public sealed partial class Mod(
     private void Init()
     {
         services.RegisterSingleton<ArenaUtils>();
-        services.RegisterSingleton<IChat, DummyChat>();
 
         input.RegisterKeyBind(ModifierKeys.Control | ModifierKeys.Shift, Key.P, () =>
         {

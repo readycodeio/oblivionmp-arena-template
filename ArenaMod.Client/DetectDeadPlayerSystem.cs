@@ -1,4 +1,5 @@
-﻿using OblivionMp.Sdk;
+﻿using OblivionMp.ChatMod;
+using OblivionMp.Sdk;
 using OblivionMpCSharpMod.Values;
 using ReadyM.SDK.Attributes;
 
@@ -20,12 +21,12 @@ public sealed partial class DetectDeadPlayerSystem(IChat chat, IPlayers players)
                 if (!HasAnnounced)
                 {
                     HasAnnounced = true;
-                    chat.ShowLocalMessage("Press Shift+Control+P to respawn!", new Color(1, 1, 0));
-                    chat.ShowLocalMessage("Arena Rules:", new Color(1, 1, 0));
-                    chat.ShowLocalMessage("Exit arena and you are eliminated.", new Color(1, 1, 0));
-                    chat.ShowLocalMessage("Fall below 30% HP and you are eliminated.", new Color(1, 1, 0));
-                    chat.ShowLocalMessage("If over half of players are ready, game begins to count down 30 seconds,", new Color(1, 1, 0));
-                    chat.ShowLocalMessage("should you fail to enter blood ring before then, you are eliminated.", new Color(1, 1, 0));
+                    chat.ShowLocal("Press Shift+Control+P to respawn!", new Color(1, 1, 0));
+                    chat.ShowLocal("Arena Rules:", new Color(1, 1, 0));
+                    chat.ShowLocal("Exit arena and you are eliminated.", new Color(1, 1, 0));
+                    chat.ShowLocal("Fall below 30% HP and you are eliminated.", new Color(1, 1, 0));
+                    chat.ShowLocal("If over half of players are ready, game begins to count down 30 seconds,", new Color(1, 1, 0));
+                    chat.ShowLocal("should you fail to enter blood ring before then, you are eliminated.", new Color(1, 1, 0));
                 }
             }
 

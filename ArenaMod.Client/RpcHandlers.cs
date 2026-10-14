@@ -1,5 +1,6 @@
 using ArenaMod.Common;
 using Microsoft.Extensions.Logging;
+using OblivionMp.ChatMod;
 using OblivionMp.Sdk;
 using OblivionMp.Sdk.Common.Archetypes.Mixins;
 using OblivionMpCSharpMod;
@@ -99,7 +100,7 @@ public sealed partial class RpcHandlers(
 
         if (entities.TryLookup(playerId, out Player player))
         {
-            chat.ShowLocalMessage($"Player {player.Nickname.ToString()} has been eliminated!", new Color(1, 0, 0));
+            chat.ShowLocal($"Player {player.Nickname.ToString()} has been eliminated!", new Color(1, 0, 0));
         }
     }
 

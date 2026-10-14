@@ -46,7 +46,7 @@ Ctrl+Shift+P respawns you if you die. Debug builds also bind numpad keys to heal
 
    Use `Debug` instead to include `.pdb` symbol files. Pass `-NoExplorer` to skip opening the output folder.
 
-4. `Output/mods/ArenaMod/` now holds `manifest.json`, `client/` and `server/`. Copy that folder into your server's `mods/` directory next to the `OblivionMp.Sdk` package, which the manifest depends on, and restart the server. Connecting players receive the client half automatically.
+4. `Output/mods/ArenaMod/` now holds `manifest.json`, `client/` and `server/`. Copy that folder into your server's `mods/` directory next to the `OblivionMp.Sdk` and [chat](https://github.com/readycodeio/oblivionmp-chat) mods, which the manifest depends on, and restart the server. The arena posts its rules and eliminations to chat. Connecting players receive the client half automatically.
 5. Optional: put one or more `.sav` files in `saves/arena/` next to the relay. Each connecting player gets a copy of a random one as a preset character. With no files there, players keep their own character.
 
 If you downloaded this as a ZIP rather than cloning, Windows marks the scripts as remote and PowerShell refuses to load them. Clear the mark once:

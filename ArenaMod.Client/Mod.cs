@@ -1,119 +1,90 @@
+﻿using ArenaMod.Common;
 using Microsoft.Extensions.Logging;
-using ArenaMod.Common;
 using OblivionMp.Sdk;
-using OblivionMp.Sdk.Entities.Extensions;
-using OblivionMpCSharpMod;
+using OblivionMp.Sdk.Archetypes.Extensions;
 using ReadyM.Api.DI;
-using ReadyM.Api.ECS.Registry;
-using ReadyM.Api.Idents;
-using ReadyM.Modloader.Mods;
-using ReadyM.Sdk.Common;
+using ReadyM.SDK.Attributes;
 using ReadyM.Sdk.Common.Input;
 
 namespace ArenaMod.Client;
 
-// The mod's entry point. The modloader instantiates the single class deriving from ModBase.
-public class Mod : ModBase
+// The mod's entry point.
+[ModEntry]
+public sealed partial class Mod(
+    IDependencyContainer services,
+    IPlayers players,
+    IInput input,
+    ILogger logger
+)
 {
-    public override string Name => "Arena Mod";
-
-    public static bool IsReady = false;
-    public static bool IsReadyLocked = false;
-
     public static string MyArea = string.Empty;
     public static bool IsInArena = false;
-    private RArenaServerRpc _serverRpc = null!;
-    public static RArenaTimerCountdown RArenaTimerCountdown { get; private set; } = null!;
-    public static DetectDeadPlayerSystem detect = null!;
+
+    private RpcHandlers rpc => services.Resolve<RpcHandlers>();
 
     // Runs once when the mod loads, before Start. Register RPC handlers, services and components.
-    protected override void RegisterServices(IDependencyContainer services)
+    private void Init()
     {
-        // RPC handler classes must be registered for their generated handlers to be wired up.
-        services.RegisterSingleton<RArenaServerRpc>();
+        services.RegisterSingleton<ArenaUtils>();
 
-        // To add replicated state, register a networked component here, then attach it to an archetype below.
-        //services.Resolve<IComponentApi>().RegisterComponent<WalletComponent>();
-        // Attaches networked components to archetypes while the ECS schema is built. Archetype
-        // membership must match the server mod.
-        RegisterArchetypes(registry =>
+        input.RegisterKeyBind(ModifierKeys.Control | ModifierKeys.Shift, Key.P, () =>
         {
-            //registry.ModifyArchetype(SDK.Archetypes.GlobalPlayerArchetype, b => b.Add<WalletComponent>());
-        });
-
-        services.RegisterSingleton<ModSystemBase, RArenaTimerCountdown>();
-        services.RegisterSingleton<ModSystemBase, DetectDeadPlayerSystem>();
-        _serverRpc = services.Resolve<RArenaServerRpc>();
-        RArenaTimerCountdown = services.Resolve<RArenaTimerCountdown>();
-        detect = services.Resolve<DetectDeadPlayerSystem>();
-    }
-
-    // Runs once after all mods have loaded. Bind input and do one-off setup here.
-    public override void Start()
-    {
-        SDK.Input.RegisterKeyBind(ModifierKeys.Control | ModifierKeys.Shift, Key.P, () =>
-        {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                detect._hasAnnounced = false;
-                me.RebirthLocalPlayer();
+                services.Resolve<DetectDeadPlayerSystem>().HasAnnounced = false;
+                me.ResurrectLocalPlayer();
             }
         });
 
 #if DEBUG
-        SDK.Input.RegisterKeyBind(Key.NUM_EIGHT, () =>
+        input.RegisterKeyBind(Key.NUM_TWO, () =>
         {
-            SDK.GameMessage.ShowMessage("Test test test", MessagePosition.Center, 4f);
-        });
-
-        SDK.Input.RegisterKeyBind(Key.NUM_TWO, () =>
-        {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                Logger.LogWarning(me.Location.ToString());
+                logger.LogWarning(me.Position.ToString());
 
-                float dx = me.Location.X;
-                float dy = me.Location.Y;
+                float dx = me.Position.X;
+                float dy = me.Position.Y;
 
                 double distance = Math.Sqrt(dx * dx + dy * dy);
-                Logger.LogError("To middle : {diff}, Current Area: {area}", distance, Mod.MyArea);
+                logger.LogError("To middle : {diff}, Current Area: {area}", distance, MyArea);
                 if (distance > RArenaCommon.Data.ArenaRadius + RArenaCommon.Data.MercyGiveUpMargin)
                 {
-                    Logger.LogWarning("This would trigger out of bounds MercyGiveUp Function");
+                    logger.LogWarning("This would trigger out of bounds MercyGiveUp Function");
                 }
             }
         });
-        SDK.Input.RegisterKeyBind(Key.NUM_ONE, () =>
+        input.RegisterKeyBind(Key.NUM_ONE, () =>
         {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                Logger.LogInformation("Sending request to heal {who}", "local player");
-                _serverRpc.SendDemandHeal();
+                logger.LogInformation("Sending request to heal {who}", "local player");
+                rpc.SendDemandHeal();
             }
         });
-        SDK.Input.RegisterKeyBind(Key.NUM_THREE, () =>
+        input.RegisterKeyBind(Key.NUM_THREE, () =>
         {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                Logger.LogInformation("Sending request to heal {who}", "all players");
-                _serverRpc.SendDemandHealAllPlayers();
+                logger.LogInformation("Sending request to heal {who}", "all players");
+                rpc.SendDemandHealAllPlayers();
             }
         });
-        SDK.Input.RegisterKeyBind(Key.NUM_SEVEN, () =>
+        input.RegisterKeyBind(Key.NUM_SEVEN, () =>
         {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                Logger.LogInformation("Sending request to switch position");
-                _serverRpc.SendDemandPositionChange();
+                logger.LogInformation("Sending request to switch position");
+                rpc.SendDemandPositionChange();
             }
         });
-        SDK.Input.RegisterKeyBind(ModifierKeys.Control, Key.NUM_SEVEN, () =>
+        input.RegisterKeyBind(ModifierKeys.Control, Key.NUM_SEVEN, () =>
         {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (players.LocalMainCharacter is { } me)
             {
-                Logger.LogInformation("Sending request to switch position with local position override");
-                me.Location = RArenaCommon.Data.ArenaSpectatorStand;
-                _serverRpc.SendDemandPositionChange();
+                logger.LogInformation("Sending request to switch position with local position override");
+                me.Position = RArenaCommon.Data.ArenaSpectatorStand;
+                rpc.SendDemandPositionChange();
             }
         });
 #endif

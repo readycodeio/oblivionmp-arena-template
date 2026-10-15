@@ -1,34 +1,36 @@
-﻿using OblivionMp.Sdk;
-using ReadyM.Modloader.Mods;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using OblivionMp.ChatMod;
+using OblivionMp.Sdk;
+using OblivionMpCSharpMod.Values;
+using ReadyM.SDK.Attributes;
 
-namespace ArenaMod.Client
+namespace ArenaMod.Client;
+
+[Service]
+public sealed partial class DetectDeadPlayerSystem(IChat chat, IPlayers players)
 {
-    public class DetectDeadPlayerSystem : ModSystemBase
+    private float _previousHp = 100f;
+
+    public bool HasAnnounced { get; set; }
+
+    private void Update()
     {
-        public bool _hasAnnounced;
-        private float _previousHp = 100f;
-        protected override void OnUpdate(UpdateTick tick)
+        if (players.LocalMainCharacter is { } me)
         {
-            if (SDK.Sync.LocalPlayer is { } me)
+            if (me.Hp < 1 && _previousHp >= 1)
             {
-                if (me.Hp < 1 && _previousHp >= 1)
+                if (!HasAnnounced)
                 {
-                    if (!_hasAnnounced)
-                    {
-                        _hasAnnounced = true;
-                        SDK.Chat.ShowLocalMessage("Press Shift+Control+P to respawn!", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                        SDK.Chat.ShowLocalMessage("Arena Rules:", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                        SDK.Chat.ShowLocalMessage("Exit arena and you are eliminated.", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                        SDK.Chat.ShowLocalMessage("Fall below 30% HP and you are eliminated.", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                        SDK.Chat.ShowLocalMessage("If over half of players are ready, game begins to count down 30 seconds,", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                        SDK.Chat.ShowLocalMessage("should you fail to enter blood ring before then, you are eliminated.", new OblivionMpCSharpMod.Values.Color(1, 1, 0));
-                    }
+                    HasAnnounced = true;
+                    chat.ShowLocal("Press Shift+Control+P to respawn!", new Color(1, 1, 0));
+                    chat.ShowLocal("Arena Rules:", new Color(1, 1, 0));
+                    chat.ShowLocal("Exit arena and you are eliminated.", new Color(1, 1, 0));
+                    chat.ShowLocal("Fall below 30% HP and you are eliminated.", new Color(1, 1, 0));
+                    chat.ShowLocal("If over half of players are ready, game begins to count down 30 seconds,", new Color(1, 1, 0));
+                    chat.ShowLocal("should you fail to enter blood ring before then, you are eliminated.", new Color(1, 1, 0));
                 }
-                _previousHp = me.Hp;
             }
+
+            _previousHp = me.Hp;
         }
     }
 }

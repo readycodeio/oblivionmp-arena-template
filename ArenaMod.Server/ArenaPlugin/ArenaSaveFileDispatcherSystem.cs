@@ -1,4 +1,8 @@
+using LiteNetLib;
 using Microsoft.Extensions.Logging;
+using ReadyM.Api.Idents;
+using ReadyM.Relay.Server.Sdk.Ecs;
+using ReadyM.Relay.Server.Sdk.Events;
 using ReadyM.Relay.Server.Sdk.Players;
 using ReadyM.SDK.Attributes;
 
@@ -7,7 +11,8 @@ namespace ArenaMod.Server.ArenaPlugin;
 [Service]
 internal sealed partial class ArenaSaveFileDispatcherSystem(
     ArenaSaveFileDispatcher dispatcher,
-    PlayerApi playerApi,
+    IServerEvents events,
+    IPlayers players,
     ILogger logger
 )
 {
@@ -16,9 +21,9 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
         logger.LogInformation("Arena plugin Init");
 
         logger.LogInformation("Registered handler {name}", nameof(OnPlayerConnectedHandler));
-        playerApi.OnPlayerConnected += OnPlayerConnectedHandler;
+        events.OnPlayerConnected += OnPlayerConnectedHandler;
         logger.LogInformation("Registered handler {name}", nameof(OnPlayerDisconnectedHandler));
-        playerApi.OnPlayerDisconnected += OnPlayerDisconnectedHandler;
+        events.OnPlayerDisconnected += OnPlayerDisconnectedHandler;
 
         dispatcher.InitializeLoadouts();
         logger.LogInformation("Arena plugin init completed");
@@ -29,13 +34,15 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
 
     private void Stop()
     {
-        playerApi.OnPlayerConnected -= OnPlayerConnectedHandler;
-        playerApi.OnPlayerDisconnected -= OnPlayerDisconnectedHandler;
+        events.OnPlayerConnected -= OnPlayerConnectedHandler;
+        events.OnPlayerDisconnected -= OnPlayerDisconnectedHandler;
     }
 
-    private void OnPlayerConnectedHandler(PlayerConnectedEvent obj)
+    private void OnPlayerConnectedHandler(PlayerId player, Entity _)
     {
-        var rawPlayerGuid = obj.ReadyMId;
+        if (players.GetReadyMId(player) is not { } rawPlayerGuid)
+            return;
+
         var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
         var templatePath = dispatcher.GetRandomLoadout();
 
@@ -59,9 +66,11 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
         }
     }
 
-    private void OnPlayerDisconnectedHandler(PlayerDisconnectedEvent obj)
+    private void OnPlayerDisconnectedHandler(PlayerId player, Entity _, DisconnectReason __)
     {
-        var rawPlayerGuid = obj.ReadyMId;
+        if (players.GetReadyMId(player) is not { } rawPlayerGuid)
+            return;
+
         var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
 
         dispatcher.ReleaseLoadout(rawPlayerGuid);

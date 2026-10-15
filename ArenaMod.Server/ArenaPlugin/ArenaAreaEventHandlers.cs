@@ -7,7 +7,7 @@ using ReadyM.SDK.Attributes;
 namespace ArenaMod.Server.ArenaPlugin;
 
 [Service]
-public sealed partial class ArenaAreaEventHandlers(Arena arena, ServerEventsApi events, RpcHandlers rpc, ILogger logger)
+public sealed partial class ArenaAreaEventHandlers(Arena arena, IServerEvents events, RpcHandlers rpc, ILogger logger)
 {
     private void Start()
     {

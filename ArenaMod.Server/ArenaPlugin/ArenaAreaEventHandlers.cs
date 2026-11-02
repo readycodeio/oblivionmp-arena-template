@@ -1,8 +1,8 @@
 ﻿using ArenaMod.Server.ArenaPlugin.Enums;
 using Microsoft.Extensions.Logging;
 using ReadyM.Api.Idents;
-using ReadyM.Relay.Server.Sdk.Events;
 using ReadyM.SDK.Attributes;
+using ReadyM.SDK.Server.Events;
 
 namespace ArenaMod.Server.ArenaPlugin;
 

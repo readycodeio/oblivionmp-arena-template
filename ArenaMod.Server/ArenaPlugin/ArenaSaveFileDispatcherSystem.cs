@@ -1,10 +1,11 @@
+using Friflo.Engine.ECS;
 using LiteNetLib;
 using Microsoft.Extensions.Logging;
 using ReadyM.Api.Idents;
-using ReadyM.Relay.Server.Sdk.Ecs;
-using ReadyM.Relay.Server.Sdk.Events;
 using ReadyM.Relay.Server.Sdk.Players;
+using ReadyM.SDK.Archetypes.Core;
 using ReadyM.SDK.Attributes;
+using ReadyM.SDK.Server.Events;
 
 namespace ArenaMod.Server.ArenaPlugin;
 
@@ -38,12 +39,8 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
         events.OnPlayerDisconnected -= OnPlayerDisconnectedHandler;
     }
 
-    private void OnPlayerConnectedHandler(PlayerId player, Entity _)
+    private void OnPlayerConnectedHandler(Player player, Guid playerGuid)
     {
-        if (players.GetReadyMId(player) is not { } rawPlayerGuid)
-            return;
-
-        var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
         var templatePath = dispatcher.GetRandomLoadout();
 
         if (!string.IsNullOrEmpty(templatePath))
@@ -55,7 +52,7 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
             File.Copy(templatePath, playerFile, overwrite: true);
             logger.LogInformation("Prepared loadout {loadout} for player {guid}", shortLoadoutName, playerGuid);
 
-            dispatcher.PlayerLoadouts[rawPlayerGuid] = templatePath;
+            dispatcher.PlayerLoadouts[playerGuid] = templatePath;
 
             if (dispatcher.PlayerLoadouts.Count > 1) 
                 PrintUsers();
@@ -66,14 +63,13 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
         }
     }
 
-    private void OnPlayerDisconnectedHandler(PlayerId player, Entity _, DisconnectReason __)
+    private void OnPlayerDisconnectedHandler(Player player, DisconnectReason __)
     {
-        if (players.GetReadyMId(player) is not { } rawPlayerGuid)
+        var playerGuidRaw = players.GetReadyMId(player.PlayerId);
+        if (playerGuidRaw is not {} playerGuid)
             return;
-
-        var playerGuid = rawPlayerGuid.ToString().Replace("-", "");
-
-        dispatcher.ReleaseLoadout(rawPlayerGuid);
+        
+        dispatcher.ReleaseLoadout(playerGuid);
 
         var playerFile = Path.Combine(dispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");
         if (File.Exists(playerFile))

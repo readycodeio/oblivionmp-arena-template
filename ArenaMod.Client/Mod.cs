@@ -4,7 +4,7 @@ using OblivionMp.Sdk;
 using OblivionMp.Sdk.Archetypes.Extensions;
 using ReadyM.Api.DI;
 using ReadyM.SDK.Attributes;
-using ReadyM.Sdk.Common.Input;
+using OblivionMpCSharpMod.Input;
 
 namespace ArenaMod.Client;
 

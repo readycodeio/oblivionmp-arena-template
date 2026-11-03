@@ -1,8 +1,5 @@
-using Friflo.Engine.ECS;
 using LiteNetLib;
 using Microsoft.Extensions.Logging;
-using ReadyM.Api.Idents;
-using ReadyM.Relay.Server.Sdk.Players;
 using ReadyM.SDK.Archetypes.Core;
 using ReadyM.SDK.Attributes;
 using ReadyM.SDK.Server.Events;
@@ -13,7 +10,6 @@ namespace ArenaMod.Server.ArenaPlugin;
 internal sealed partial class ArenaSaveFileDispatcherSystem(
     ArenaSaveFileDispatcher dispatcher,
     IServerEvents events,
-    IPlayers players,
     ILogger logger
 )
 {
@@ -63,12 +59,8 @@ internal sealed partial class ArenaSaveFileDispatcherSystem(
         }
     }
 
-    private void OnPlayerDisconnectedHandler(Player player, DisconnectReason __)
+    private void OnPlayerDisconnectedHandler(Player player, Guid playerGuid, DisconnectReason __)
     {
-        var playerGuidRaw = players.GetReadyMId(player.PlayerId);
-        if (playerGuidRaw is not {} playerGuid)
-            return;
-        
         dispatcher.ReleaseLoadout(playerGuid);
 
         var playerFile = Path.Combine(dispatcher.SavesPlayersDir, $"player_{playerGuid}.sav");

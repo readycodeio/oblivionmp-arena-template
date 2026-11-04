@@ -1,6 +1,6 @@
 using ArenaMod.Server.ArenaPlugin;
 using ArenaMod.Server.ArenaPlugin.Enums;
-using OblivionMp.Sdk.Common.Archetypes;
+using OblivionMP.SDK.Common.Archetypes;
 using ReadyM.SDK.Server.Entities;
 
 namespace ArenaMod.Server.Conditions;

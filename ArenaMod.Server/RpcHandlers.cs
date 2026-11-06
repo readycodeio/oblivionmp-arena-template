@@ -1,5 +1,5 @@
 using ArenaMod.Common;
-using OblivionMp.Sdk.Common.Archetypes;
+using OblivionMP.SDK.Common.Archetypes;
 using ReadyM.Relay.Server.Sdk.Rpc;
 using ReadyM.SDK.Attributes;
 using ReadyM.SDK.Server.Entities;

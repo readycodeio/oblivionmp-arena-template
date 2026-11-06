@@ -1,8 +1,8 @@
 using ArenaMod.Common;
 using Microsoft.Extensions.Logging;
 using OblivionMp.ChatMod;
-using OblivionMp.Sdk;
-using OblivionMp.Sdk.Common.Archetypes.Mixins;
+using OblivionMP.SDK;
+using OblivionMP.SDK.Common.Archetypes.Mixins;
 using OblivionMpCSharpMod;
 using OblivionMpCSharpMod.Values;
 using ReadyM.Api.Idents;

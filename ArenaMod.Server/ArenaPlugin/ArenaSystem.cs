@@ -2,7 +2,7 @@
 using ArenaMod.Server.ArenaPlugin.Enums;
 using ArenaMod.Server.Conditions;
 using Microsoft.Extensions.Logging;
-using OblivionMp.Sdk.Common.Archetypes;
+using OblivionMP.SDK.Common.Archetypes;
 using ReadyM.Api.Idents;
 using ReadyM.Relay.Common.Oblivion.ECS.Values;
 using ReadyM.SDK.Attributes;

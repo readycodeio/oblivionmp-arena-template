@@ -1,5 +1,5 @@
-﻿using OblivionMp.Sdk;
-using OblivionMp.Sdk.Common.Archetypes.Mixins;
+﻿using OblivionMP.SDK;
+using OblivionMP.SDK.Common.Archetypes.Mixins;
 using OblivionMpCSharpMod;
 using ReadyM.Api.Idents;
 using ReadyM.SDK.Archetypes.Core;

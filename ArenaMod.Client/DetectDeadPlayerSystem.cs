@@ -1,5 +1,5 @@
 ﻿using OblivionMp.ChatMod;
-using OblivionMp.Sdk;
+using OblivionMP.SDK;
 using OblivionMpCSharpMod.Values;
 using ReadyM.SDK.Attributes;
 

@@ -1,10 +1,10 @@
 ﻿using ArenaMod.Common;
 using Microsoft.Extensions.Logging;
-using OblivionMp.Sdk;
-using OblivionMp.Sdk.Archetypes.Extensions;
+using OblivionMP.SDK;
+using OblivionMP.SDK.Archetypes.Extensions;
 using ReadyM.Api.DI;
 using ReadyM.SDK.Attributes;
-using ReadyM.Sdk.Common.Input;
+using OblivionMpCSharpMod.Input;
 
 namespace ArenaMod.Client;
 

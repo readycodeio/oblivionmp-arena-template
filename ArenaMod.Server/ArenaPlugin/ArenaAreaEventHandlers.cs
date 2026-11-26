@@ -21,13 +21,13 @@ public sealed partial class ArenaAreaEventHandlers(Arena arena, IServerEvents ev
         events.OnPlayerLeftArea -= OnPlayerLeftArea;
     }
 
-    private void OnPlayerJoinedArea(PlayerId pId, AreaId aId)
+    private void OnPlayerJoinedArea(PlayerId pId, AreaId aId, DimensionId dimension)
     {
         rpc.SendAreaJoined(pId, aId.ToString());
         arena.PlayersAreas[pId] = aId.ToString();
     }
 
-    private void OnPlayerLeftArea(PlayerId pId, AreaId aId)
+    private void OnPlayerLeftArea(PlayerId pId, AreaId aId, DimensionId dimension)
     {
         if (!aId.ToString().Contains("L_PersistentDungeon-1C60F"))
             return;
